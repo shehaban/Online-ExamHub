@@ -19,6 +19,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [role, setRole] = useState<"student" | "instructor">("student")
+  const [instructorPassword, setInstructorPassword] = useState("")
   const [error, setError] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { register } = useAuth()
@@ -35,6 +36,11 @@ export default function RegisterPage() {
 
     if (password.length < 6) {
       setError("Password must be at least 6 characters")
+      return
+    }
+
+    if (role === "instructor" && instructorPassword !== "INSTRUCTOR2024") {
+      setError("Invalid instructor access code")
       return
     }
 
@@ -162,6 +168,22 @@ export default function RegisterPage() {
                 </Label>
               </RadioGroup>
             </div>
+            {role === "instructor" && (
+              <div className="space-y-2">
+                <Label htmlFor="instructorPassword">Instructor Access Code</Label>
+                <Input
+                  id="instructorPassword"
+                  type="password"
+                  placeholder="Enter instructor access code"
+                  value={instructorPassword}
+                  onChange={(e) => setInstructorPassword(e.target.value)}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  Contact your administrator to obtain the instructor access code.
+                </p>
+              </div>
+            )}
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
             <Button type="submit" className="w-full" disabled={isSubmitting}>
