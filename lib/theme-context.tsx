@@ -34,12 +34,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     document.documentElement.classList.toggle("dark", newTheme === "dark")
   }
 
-  if (!mounted) {
-    return <>{children}</>
+  // Always provide the context, but toggleTheme is a no-op until mounted
+  const value = {
+    theme,
+    toggleTheme: mounted ? toggleTheme : () => {},
   }
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   )
