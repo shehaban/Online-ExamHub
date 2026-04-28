@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useAuth } from "@/lib/auth-context"
+import { useTheme } from "@/lib/theme-context"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -12,10 +13,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { GraduationCap, LogOut, Settings, User, LayoutDashboard } from "lucide-react"
+import { GraduationCap, LogOut, Settings, User, LayoutDashboard, Moon, Sun } from "lucide-react"
 
 export function Header() {
   const { user, logout } = useAuth()
+  const { theme, toggleTheme } = useTheme()
 
   const getInitials = (name: string) => {
     return name
@@ -36,7 +38,21 @@ export function Header() {
           <span className="text-lg font-semibold text-foreground">ExamHub</span>
         </Link>
 
-        <nav className="flex items-center gap-4">
+        <nav className="flex items-center gap-2 sm:gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            className="h-9 w-9"
+            aria-label="Toggle theme"
+          >
+            {theme === "light" ? (
+              <Moon className="h-5 w-5" />
+            ) : (
+              <Sun className="h-5 w-5" />
+            )}
+          </Button>
+          
           {user ? (
             <>
               <span className="text-sm text-muted-foreground hidden sm:inline-block">

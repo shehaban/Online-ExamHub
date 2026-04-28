@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Keyboard, Plus, Video } from "lucide-react"
+import { Keyboard, Plus } from "lucide-react"
 
 export function ExamJoinSection() {
   const [examCode, setExamCode] = useState("")
@@ -55,10 +55,9 @@ export function ExamJoinSection() {
             <Button
               size="lg"
               className="w-full sm:w-auto gap-2"
-              onClick={handleCreateExam}
+              onClick={() => router.push("/auth/register")}
             >
-              <Video className="h-5 w-5" />
-              Start for free
+              Get started
             </Button>
           )}
           
