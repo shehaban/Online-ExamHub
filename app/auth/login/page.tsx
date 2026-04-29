@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Spinner } from "@/components/ui/spinner"
-import { GraduationCap, AlertCircle } from "lucide-react"
+import { GraduationCap, AlertCircle, ArrowLeft } from "lucide-react"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -41,7 +41,15 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md">
+      <div className="w-full max-w-md">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to home
+        </Link>
+      <Card className="w-full">
         <CardHeader className="space-y-4 text-center">
           <div className="flex justify-center">
             <div className="flex items-center gap-2">
@@ -105,6 +113,7 @@ export default function LoginPage() {
           </CardFooter>
         </form>
       </Card>
+      </div>
     </div>
   )
 }
