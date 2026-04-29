@@ -5,22 +5,24 @@ import Cookies from "js-cookie"
 
 export interface User {
   id: string
-  email: string
+  number: string
   name: string
   role: "student" | "instructor"
   createdAt: string
+  avatar?: string
 }
 
 interface AuthContextType {
   user: User | null
   isLoading: boolean
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
+  login: (number: string, password: string) => Promise<{ success: boolean; error?: string }>
   register: (data: RegisterData) => Promise<{ success: boolean; error?: string }>
   logout: () => void
+  updateUser: (data: Partial<Pick<User, "name" | "avatar">>) => void
 }
 
 interface RegisterData {
-  email: string
+  number: string
   password: string
   name: string
   role: "student" | "instructor"
@@ -67,14 +69,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(`${USERS_KEY}_passwords`, JSON.stringify(passwords))
   }
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (number: string, password: string) => {
     const users = getStoredUsers()
     const passwords = getStoredPasswords()
-    
-    const foundUser = users.find((u) => u.email.toLowerCase() === email.toLowerCase())
-    
+
+    const foundUser = users.find((u) => u.number.toLowerCase() === number.toLowerCase())
+
     if (!foundUser) {
-      return { success: false, error: "No account found with this email" }
+      return { success: false, error: "No account found with this number" }
     }
 
     if (passwords[foundUser.id] !== password) {
@@ -83,21 +85,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setUser(foundUser)
     Cookies.set(SESSION_KEY, foundUser.id, { expires: 7 })
-    
+
     return { success: true }
   }, [])
 
   const register = useCallback(async (data: RegisterData) => {
     const users = getStoredUsers()
     const passwords = getStoredPasswords()
-    
-    if (users.some((u) => u.email.toLowerCase() === data.email.toLowerCase())) {
-      return { success: false, error: "An account with this email already exists" }
+
+    if (users.some((u) => u.number.toLowerCase() === data.number.toLowerCase())) {
+      return { success: false, error: "An account with this number already exists" }
     }
 
     const newUser: User = {
       id: crypto.randomUUID(),
-      email: data.email,
+      number: data.number,
       name: data.name,
       role: data.role,
       createdAt: new Date().toISOString(),
@@ -105,14 +107,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     users.push(newUser)
     passwords[newUser.id] = data.password
-    
+
     saveUsers(users)
     savePasswords(passwords)
-    
+
     setUser(newUser)
     Cookies.set(SESSION_KEY, newUser.id, { expires: 7 })
-    
+
     return { success: true }
+  }, [])
+
+  const updateUser = useCallback((data: Partial<Pick<User, "name" | "avatar">>) => {
+    setUser((prev) => {
+      if (!prev) return null
+      const updated = { ...prev, ...data }
+      const users = getStoredUsers()
+      const idx = users.findIndex((u) => u.id === prev.id)
+      if (idx !== -1) {
+        users[idx] = updated
+        saveUsers(users)
+      }
+      return updated
+    })
   }, [])
 
   const logout = useCallback(() => {
@@ -121,7 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, register, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   )
