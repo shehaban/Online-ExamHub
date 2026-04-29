@@ -33,15 +33,19 @@ To learn more, take a look at the following resources:
 <a href="https://v0.app/chat/api/kiro/clone/shehaban/Online-ExamHub" alt="Open in Kiro"><img src="https://pdgvvgmkdvyeydso.public.blob.vercel-storage.com/open%20in%20kiro.svg?sanitize=true" /></a>
 
 ## Overview
+
 The Online Examination Platform is a modern web-based system designed to simplify and enhance the process of creating, managing, and evaluating exams. It replaces traditional paper-based examination methods with a fully digital solution that improves efficiency, accuracy, and accessibility for both instructors and students.
 
 ## Problem Statement
+
 Traditional examination systems rely heavily on manual processes such as paper-based tests and hand grading. These methods are time-consuming, prone to human error, and lack scalability. Additionally, they provide delayed feedback and limited insights into student performance.
 
 ## Solution
+
 This project introduces an intelligent online examination system that automates the entire exam lifecycle — from creation to evaluation and performance tracking. The platform ensures fast, reliable, and user-friendly exam management while integrating modern technologies to improve the learning experience.
 
 ## Features
+
 - 📝 Create, edit, and manage exams بسهولة
 - ⚡ Automatic grading with instant results
 - 📊 Performance dashboard for tracking student progress
@@ -50,6 +54,7 @@ This project introduces an intelligent online examination system that automates 
 - 🌐 Accessible anytime and anywhere
 
 ## System Capabilities
+
 - Instructors can:
   - Create and publish exams
   - Generate exams using AI
@@ -60,6 +65,7 @@ This project introduces an intelligent online examination system that automates 
   - Communicate with instructors
 
 ## Benefits
+
 - Reduces manual workload for instructors
 - Eliminates grading errors
 - Provides instant feedback to students
@@ -67,16 +73,19 @@ This project introduces an intelligent online examination system that automates 
 - Enables data-driven decision making
 
 ## Technologies (Example)
+
 - Frontend: React / HTML / CSS / JavaScript
 - Backend: Node.js / Express
 - Database: MongoDB / SQL
 - AI Integration: NLP-based question generation
 
 ## Future Improvements
+
 - Advanced analytics and reporting
 - Adaptive exams based on student level
 - Mobile application support
 - Enhanced security and anti-cheating mechanisms
 
 ## Conclusion
+
 This platform aims to transform traditional examination systems into a smart, automated, and scalable solution that aligns with modern educational needs.

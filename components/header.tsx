@@ -1,9 +1,9 @@
-"use client"
+'use client'
 
-import Link from "next/link"
-import { useAuth } from "@/lib/auth-context"
-import { useTheme } from "@/lib/theme-context"
-import { Button } from "@/components/ui/button"
+import Link from 'next/link'
+import { useAuth } from '@/lib/auth-context'
+import { useTheme } from '@/lib/theme-context'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,9 +11,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { GraduationCap, LogOut, Settings, User, LayoutDashboard, Moon, Sun } from "lucide-react"
+} from '@/components/ui/dropdown-menu'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { GraduationCap, LogOut, Settings, User, LayoutDashboard, Moon, Sun } from 'lucide-react'
 
 export function Header() {
   const { user, logout } = useAuth()
@@ -21,9 +21,9 @@ export function Header() {
 
   const getInitials = (name: string) => {
     return name
-      .split(" ")
+      .split(' ')
       .map((n) => n[0])
-      .join("")
+      .join('')
       .toUpperCase()
       .slice(0, 2)
   }
@@ -46,17 +46,13 @@ export function Header() {
             className="h-9 w-9"
             aria-label="Toggle theme"
           >
-            {theme === "light" ? (
-              <Moon className="h-5 w-5" />
-            ) : (
-              <Sun className="h-5 w-5" />
-            )}
+            {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
           </Button>
-          
+
           {user ? (
             <>
               <span className="text-sm text-muted-foreground hidden sm:inline-block">
-                {user.role === "instructor" ? "Instructor" : "Student"}
+                {user.role === 'instructor' ? 'Instructor' : 'Student'}
               </span>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -72,9 +68,7 @@ export function Header() {
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium leading-none">{user.name}</p>
-                      <p className="text-xs leading-none text-muted-foreground">
-                        {user.email}
-                      </p>
+                      <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
@@ -97,7 +91,10 @@ export function Header() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={logout} className="cursor-pointer text-destructive focus:text-destructive">
+                  <DropdownMenuItem
+                    onClick={logout}
+                    className="cursor-pointer text-destructive focus:text-destructive"
+                  >
                     <LogOut className="mr-2 h-4 w-4" />
                     Log out
                   </DropdownMenuItem>

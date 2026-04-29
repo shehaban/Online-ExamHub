@@ -1,9 +1,9 @@
-"use client"
+'use client'
 
-import { Header } from "@/components/header"
-import { ExamJoinSection } from "@/components/exam-join-section"
-import { FeaturesSection } from "@/components/features-section"
-import { Footer } from "@/components/footer"
+import { Header } from '@/components/header'
+import { ExamJoinSection } from '@/components/exam-join-section'
+import { FeaturesSection } from '@/components/features-section'
+import { Footer } from '@/components/footer'
 
 export default function HomePage() {
   return (

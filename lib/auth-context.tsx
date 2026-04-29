@@ -1,13 +1,13 @@
-"use client"
+'use client'
 
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
-import Cookies from "js-cookie"
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
+import Cookies from 'js-cookie'
 
 export interface User {
   id: string
   email: string
   name: string
-  role: "student" | "instructor"
+  role: 'student' | 'instructor'
   createdAt: string
 }
 
@@ -23,13 +23,13 @@ interface RegisterData {
   email: string
   password: string
   name: string
-  role: "student" | "instructor"
+  role: 'student' | 'instructor'
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-const USERS_KEY = "exam_platform_users"
-const SESSION_KEY = "exam_platform_session"
+const USERS_KEY = 'exam_platform_users'
+const SESSION_KEY = 'exam_platform_session'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -48,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const getStoredUsers = (): User[] => {
-    if (typeof window === "undefined") return []
+    if (typeof window === 'undefined') return []
     const stored = localStorage.getItem(USERS_KEY)
     return stored ? JSON.parse(stored) : []
   }
@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const getStoredPasswords = (): Record<string, string> => {
-    if (typeof window === "undefined") return {}
+    if (typeof window === 'undefined') return {}
     const stored = localStorage.getItem(`${USERS_KEY}_passwords`)
     return stored ? JSON.parse(stored) : {}
   }
@@ -70,29 +70,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     const users = getStoredUsers()
     const passwords = getStoredPasswords()
-    
+
     const foundUser = users.find((u) => u.email.toLowerCase() === email.toLowerCase())
-    
+
     if (!foundUser) {
-      return { success: false, error: "No account found with this email" }
+      return { success: false, error: 'No account found with this email' }
     }
 
     if (passwords[foundUser.id] !== password) {
-      return { success: false, error: "Invalid password" }
+      return { success: false, error: 'Invalid password' }
     }
 
     setUser(foundUser)
     Cookies.set(SESSION_KEY, foundUser.id, { expires: 7 })
-    
+
     return { success: true }
   }, [])
 
   const register = useCallback(async (data: RegisterData) => {
     const users = getStoredUsers()
     const passwords = getStoredPasswords()
-    
+
     if (users.some((u) => u.email.toLowerCase() === data.email.toLowerCase())) {
-      return { success: false, error: "An account with this email already exists" }
+      return { success: false, error: 'An account with this email already exists' }
     }
 
     const newUser: User = {
@@ -105,13 +105,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     users.push(newUser)
     passwords[newUser.id] = data.password
-    
+
     saveUsers(users)
     savePasswords(passwords)
-    
+
     setUser(newUser)
     Cookies.set(SESSION_KEY, newUser.id, { expires: 7 })
-    
+
     return { success: true }
   }, [])
 
@@ -130,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext)
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider")
+    throw new Error('useAuth must be used within an AuthProvider')
   }
   return context
 }
