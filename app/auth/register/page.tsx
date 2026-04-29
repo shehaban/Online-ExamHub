@@ -11,15 +11,20 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Spinner } from "@/components/ui/spinner"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { GraduationCap, AlertCircle, User, BookOpen } from "lucide-react"
+import { GraduationCap, AlertCircle, User, BookOpen, ArrowLeft } from "lucide-react"
 
 export default function RegisterPage() {
   const [name, setName] = useState("")
-  const [email, setEmail] = useState("")
+  const [identifier, setIdentifier] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [role, setRole] = useState<"student" | "instructor">("student")
   const [instructorPassword, setInstructorPassword] = useState("")
+
+  const handleRoleChange = (value: "student" | "instructor") => {
+    setRole(value)
+    setIdentifier("")
+  }
   const [error, setError] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { register } = useAuth()
@@ -47,7 +52,7 @@ export default function RegisterPage() {
     setIsSubmitting(true)
 
     try {
-      const result = await register({ email, password, name, role })
+      const result = await register({ email: identifier, password, name, role })
       if (result.success) {
         router.push("/")
       } else {
@@ -62,7 +67,15 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8">
-      <Card className="w-full max-w-md">
+      <div className="w-full max-w-md">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to home
+        </Link>
+      <Card className="w-full">
         <CardHeader className="space-y-4 text-center">
           <div className="flex justify-center">
             <div className="flex items-center gap-2">
@@ -100,15 +113,17 @@ export default function RegisterPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="identifier">
+                {role === "instructor" ? "Instructor Number" : "Student Number"}
+              </Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="identifier"
+                type="text"
+                placeholder={role === "instructor" ? "e.g. INS-00123" : "e.g. STU-00456"}
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 required
-                autoComplete="email"
+                autoComplete="off"
               />
             </div>
             <div className="space-y-2">
@@ -139,7 +154,7 @@ export default function RegisterPage() {
               <Label>I am a...</Label>
               <RadioGroup
                 value={role}
-                onValueChange={(value) => setRole(value as "student" | "instructor")}
+                onValueChange={(value) => handleRoleChange(value as "student" | "instructor")}
                 className="grid grid-cols-2 gap-4"
               >
                 <Label
@@ -199,6 +214,7 @@ export default function RegisterPage() {
           </CardFooter>
         </form>
       </Card>
+      </div>
     </div>
   )
 }
