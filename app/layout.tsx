@@ -5,12 +5,13 @@ import { AuthProvider } from '@/lib/auth-context'
 import { ThemeProvider } from '@/lib/theme-context'
 import './globals.css'
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const _geist = Geist({ subsets: ['latin'] })
+const _geistMono = Geist_Mono({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'ExamHub - Online Examination Platform',
-  description: 'Create, take, and manage exams seamlessly. Instant grading, real-time results, and AI-powered exam generation.',
+  description:
+    'Create, take, and manage exams seamlessly. Instant grading, real-time results, and AI-powered exam generation.',
   generator: 'v0.app',
   icons: {
     icon: [
@@ -40,9 +41,7 @@ export default function RootLayout({
     <html lang="en" className="bg-background" suppressHydrationWarning>
       <body className="font-sans antialiased">
         <ThemeProvider>
-          <AuthProvider>
-            {children}
-          </AuthProvider>
+          <AuthProvider>{children}</AuthProvider>
         </ThemeProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>

@@ -1,51 +1,58 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { useAuth } from "@/lib/auth-context"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { GraduationCap, AlertCircle, User, BookOpen, ArrowLeft } from "lucide-react"
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { useAuth } from '@/lib/auth-context'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { GraduationCap, AlertCircle, User, BookOpen, ArrowLeft } from 'lucide-react'
 
 export default function RegisterPage() {
-  const [name, setName] = useState("")
-  const [number, setNumber] = useState("")
-  const [password, setPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [role, setRole] = useState<"student" | "instructor">("student")
-  const [instructorCode, setInstructorCode] = useState("")
-  const [error, setError] = useState("")
+  const [name, setName] = useState('')
+  const [number, setNumber] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [role, setRole] = useState<'student' | 'instructor'>('student')
+  const [instructorCode, setInstructorCode] = useState('')
+  const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { register } = useAuth()
   const router = useRouter()
 
-  const handleRoleChange = (value: "student" | "instructor") => {
+  const handleRoleChange = (value: 'student' | 'instructor') => {
     setRole(value)
-    setNumber("")
-    setInstructorCode("")
+    setNumber('')
+    setInstructorCode('')
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError("")
+    setError('')
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match")
+      setError('Passwords do not match')
       return
     }
 
     if (password.length < 6) {
-      setError("Password must be at least 6 characters")
+      setError('Password must be at least 6 characters')
       return
     }
 
-    if (role === "instructor" && instructorCode !== "INSTRUCTOR2024") {
-      setError("Invalid instructor access code")
+    if (role === 'instructor' && instructorCode !== 'INSTRUCTOR2024') {
+      setError('Invalid instructor access code')
       return
     }
 
@@ -54,12 +61,12 @@ export default function RegisterPage() {
     try {
       const result = await register({ number, password, name, role })
       if (result.success) {
-        router.push("/")
+        router.push('/')
       } else {
-        setError(result.error || "Registration failed")
+        setError(result.error || 'Registration failed')
       }
     } catch {
-      setError("An unexpected error occurred")
+      setError('An unexpected error occurred')
     } finally {
       setIsSubmitting(false)
     }
@@ -106,15 +113,15 @@ export default function RegisterPage() {
                 <Label>I am a...</Label>
                 <RadioGroup
                   value={role}
-                  onValueChange={(value) => handleRoleChange(value as "student" | "instructor")}
+                  onValueChange={(value) => handleRoleChange(value as 'student' | 'instructor')}
                   className="grid grid-cols-2 gap-4"
                 >
                   <Label
                     htmlFor="student"
                     className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 p-4 cursor-pointer transition-colors ${
-                      role === "student"
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50"
+                      role === 'student'
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:border-primary/50'
                     }`}
                   >
                     <RadioGroupItem value="student" id="student" className="sr-only" />
@@ -124,9 +131,9 @@ export default function RegisterPage() {
                   <Label
                     htmlFor="instructor"
                     className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 p-4 cursor-pointer transition-colors ${
-                      role === "instructor"
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50"
+                      role === 'instructor'
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:border-primary/50'
                     }`}
                   >
                     <RadioGroupItem value="instructor" id="instructor" className="sr-only" />
@@ -151,12 +158,12 @@ export default function RegisterPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="number">
-                  {role === "instructor" ? "Instructor Number" : "Student Number"}
+                  {role === 'instructor' ? 'Instructor Number' : 'Student Number'}
                 </Label>
                 <Input
                   id="number"
                   type="text"
-                  placeholder={role === "instructor" ? "e.g. INS-00123" : "e.g. STU-00456"}
+                  placeholder={role === 'instructor' ? 'e.g. INS-00123' : 'e.g. STU-00456'}
                   value={number}
                   onChange={(e) => setNumber(e.target.value)}
                   required
@@ -190,7 +197,7 @@ export default function RegisterPage() {
                 />
               </div>
 
-              {role === "instructor" && (
+              {role === 'instructor' && (
                 <div className="space-y-2">
                   <Label htmlFor="instructorCode">Instructor Access Code</Label>
                   <Input
@@ -209,10 +216,10 @@ export default function RegisterPage() {
             </CardContent>
             <CardFooter className="flex flex-col gap-4">
               <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? "Creating account..." : "Create account"}
+                {isSubmitting ? 'Creating account...' : 'Create account'}
               </Button>
               <p className="text-sm text-muted-foreground text-center">
-                Already have an account?{" "}
+                Already have an account?{' '}
                 <Link href="/auth/login" className="text-primary hover:underline font-medium">
                   Sign in
                 </Link>

@@ -1,38 +1,45 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { useAuth } from "@/lib/auth-context"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { GraduationCap, AlertCircle, ArrowLeft } from "lucide-react"
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { useAuth } from '@/lib/auth-context'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { GraduationCap, AlertCircle, ArrowLeft } from 'lucide-react'
 
 export default function LoginPage() {
-  const [number, setNumber] = useState("")
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
+  const [number, setNumber] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { login } = useAuth()
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError("")
+    setError('')
     setIsSubmitting(true)
 
     try {
       const result = await login(number, password)
       if (result.success) {
-        router.push("/")
+        router.push('/')
       } else {
-        setError(result.error || "Login failed")
+        setError(result.error || 'Login failed')
       }
     } catch {
-      setError("An unexpected error occurred")
+      setError('An unexpected error occurred')
     } finally {
       setIsSubmitting(false)
     }
@@ -100,10 +107,10 @@ export default function LoginPage() {
             </CardContent>
             <CardFooter className="flex flex-col gap-4">
               <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? "Signing in..." : "Sign in"}
+                {isSubmitting ? 'Signing in...' : 'Sign in'}
               </Button>
               <p className="text-sm text-muted-foreground text-center">
-                Don&apos;t have an account?{" "}
+                Don&apos;t have an account?{' '}
                 <Link href="/auth/register" className="text-primary hover:underline font-medium">
                   Create one
                 </Link>

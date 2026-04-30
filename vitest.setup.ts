@@ -1,10 +1,6 @@
 import '@testing-library/react'
-import { expect, afterEach } from 'vitest'
+import { afterEach } from 'vitest'
 import { cleanup } from '@testing-library/react'
-import * as matchers from '@testing-library/react'
-
-// Extend Vitest's expect with testing-library matchers
-expect.extend(matchers)
 
 // Clean up after each test
 afterEach(() => {
