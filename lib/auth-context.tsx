@@ -52,7 +52,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const getStoredUsers = (): User[] => {
     if (typeof window === 'undefined') return []
     const stored = localStorage.getItem(USERS_KEY)
-    return stored ? JSON.parse(stored) : []
+    if (!stored) return []
+
+    try {
+      return JSON.parse(stored) as User[]
+    } catch (error) {
+      console.error('Failed to parse stored users:', error)
+      localStorage.removeItem(USERS_KEY)
+      return []
+    }
   }
 
   const saveUsers = (users: User[]) => {
@@ -62,7 +70,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const getStoredPasswords = (): Record<string, string> => {
     if (typeof window === 'undefined') return {}
     const stored = localStorage.getItem(`${USERS_KEY}_passwords`)
-    return stored ? JSON.parse(stored) : {}
+    if (!stored) return {}
+
+    try {
+      return JSON.parse(stored) as Record<string, string>
+    } catch (error) {
+      console.error('Failed to parse stored passwords:', error)
+      localStorage.removeItem(`${USERS_KEY}_passwords`)
+      return {}
+    }
   }
 
   const savePasswords = (passwords: Record<string, string>) => {
@@ -73,7 +89,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const users = getStoredUsers()
     const passwords = getStoredPasswords()
 
-    const foundUser = users.find((u) => u.number.toLowerCase() === number.toLowerCase())
+    const foundUser = users.find(
+      (u) => String(u.number ?? '').toLowerCase() === number.toLowerCase()
+    )
 
     if (!foundUser) {
       return { success: false, error: 'No account found with this number' }
@@ -90,31 +108,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const register = useCallback(async (data: RegisterData) => {
-    const users = getStoredUsers()
-    const passwords = getStoredPasswords()
+    try {
+      const users = getStoredUsers()
+      const passwords = getStoredPasswords()
 
-    if (users.some((u) => u.number.toLowerCase() === data.number.toLowerCase())) {
-      return { success: false, error: 'An account with this number already exists' }
+      if (users.some((u) => String(u.number ?? '').toLowerCase() === data.number.toLowerCase())) {
+        return { success: false, error: 'An account with this number already exists' }
+      }
+
+      const newUser: User = {
+        id:
+          typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+            ? crypto.randomUUID()
+            : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
+        number: data.number,
+        name: data.name,
+        role: data.role,
+        createdAt: new Date().toISOString(),
+      }
+
+      users.push(newUser)
+      passwords[newUser.id] = data.password
+
+      saveUsers(users)
+      savePasswords(passwords)
+
+      setUser(newUser)
+      Cookies.set(SESSION_KEY, newUser.id, { expires: 7 })
+
+      return { success: true }
+    } catch (error) {
+      console.error('Registration error:', error)
+      return { success: false, error: 'Registration failed. Please try again.' }
     }
-
-    const newUser: User = {
-      id: crypto.randomUUID(),
-      number: data.number,
-      name: data.name,
-      role: data.role,
-      createdAt: new Date().toISOString(),
-    }
-
-    users.push(newUser)
-    passwords[newUser.id] = data.password
-
-    saveUsers(users)
-    savePasswords(passwords)
-
-    setUser(newUser)
-    Cookies.set(SESSION_KEY, newUser.id, { expires: 7 })
-
-    return { success: true }
   }, [])
 
   const updateUser = useCallback((data: Partial<Pick<User, 'name' | 'avatar'>>) => {

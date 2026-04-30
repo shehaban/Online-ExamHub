@@ -41,7 +41,7 @@ function TestComponent() {
           <button
             onClick={() =>
               register({
-                number: '1234',
+                number: 'STU-001',
                 password: 'password123',
                 name: 'Test User',
                 role: 'student',
@@ -50,7 +50,7 @@ function TestComponent() {
           >
             Register
           </button>
-          <button onClick={() => login('test@test.com', 'password123')}>Login</button>
+          <button onClick={() => login('STU-001', 'password123')}>Login</button>
         </>
       )}
     </div>
@@ -86,7 +86,7 @@ describe('AuthContext', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('user-name').textContent).toBe('Test User')
-      expect(screen.getByTestId('user-email').textContent).toBe('test@test.com')
+      expect(screen.getByTestId('user-number').textContent).toBe('STU-001')
       expect(screen.getByTestId('user-role').textContent).toBe('student')
     })
   })
@@ -96,7 +96,7 @@ describe('AuthContext', () => {
     const users = [
       {
         id: 'test-id',
-        email: 'test@test.com',
+        number: 'STU-001',
         name: 'Test User',
         role: 'student',
         createdAt: new Date().toISOString(),
