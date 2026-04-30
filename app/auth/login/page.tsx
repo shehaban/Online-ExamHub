@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
@@ -21,18 +21,18 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError("")
+    setError('')
     setIsSubmitting(true)
 
     try {
       const result = await login(number, password)
       if (result.success) {
-        router.push("/")
+        router.push('/')
       } else {
-        setError(result.error || "Login failed")
+        setError(result.error || 'Login failed')
       }
     } catch {
-      setError("An unexpected error occurred")
+      setError('An unexpected error occurred')
     } finally {
       setIsSubmitting(false)
     }

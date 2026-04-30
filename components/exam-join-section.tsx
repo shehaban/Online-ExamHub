@@ -1,20 +1,20 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { useAuth } from "@/lib/auth-context"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Keyboard, Plus } from "lucide-react"
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/auth-context'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Keyboard, Plus } from 'lucide-react'
 
 export function ExamJoinSection() {
-  const [examCode, setExamCode] = useState("")
+  const [examCode, setExamCode] = useState('')
   const { user } = useAuth()
   const router = useRouter()
 
   const handleJoinExam = () => {
     if (!user) {
-      router.push("/auth/login")
+      router.push('/auth/login')
       return
     }
     if (examCode.trim()) {
@@ -24,10 +24,10 @@ export function ExamJoinSection() {
 
   const handleCreateExam = () => {
     if (!user) {
-      router.push("/auth/login")
+      router.push('/auth/login')
       return
     }
-    router.push("/exam/create")
+    router.push('/exam/create')
   }
 
   return (
@@ -37,38 +37,45 @@ export function ExamJoinSection() {
           Online exams for everyone
         </h1>
         <p className="text-lg sm:text-xl text-muted-foreground text-pretty">
-          Create, take, and manage exams seamlessly. Instant grading, real-time results, and AI-powered exam generation.
+          Create, take, and manage exams seamlessly. Instant grading, real-time results, and
+          AI-powered exam generation.
         </p>
-        
+
         <div className="flex flex-col sm:flex-row items-center gap-3 pt-4">
-          {user?.role === "instructor" && (
-            <Button
-              size="lg"
-              className="w-full sm:w-auto gap-2"
-              onClick={handleCreateExam}
-            >
+          {user?.role === 'instructor' && (
+            <Button size="lg" className="w-full sm:w-auto gap-2" onClick={handleCreateExam}>
               <Plus className="h-5 w-5" />
               Create exam
             </Button>
           )}
           <Button
             size="lg"
-            variant={user ? "default" : "outline"}
+            variant={user ? 'default' : 'outline'}
             className="w-full sm:w-auto gap-2"
             onClick={() => {
               if (!user) {
-                router.push("/auth/login")
+                router.push('/auth/login')
                 return
               }
-              router.push("/rooms")
+              router.push('/rooms')
             }}
           >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+              />
             </svg>
             Rooms
           </Button>
-          
+
           <div className="flex items-center w-full sm:w-auto">
             <div className="relative flex-1 sm:flex-none">
               <Keyboard className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -79,7 +86,7 @@ export function ExamJoinSection() {
                 onChange={(e) => setExamCode(e.target.value)}
                 className="pl-10 h-11 w-full sm:w-64"
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") handleJoinExam()
+                  if (e.key === 'Enter') handleJoinExam()
                 }}
               />
             </div>
@@ -94,13 +101,13 @@ export function ExamJoinSection() {
             </Button>
           </div>
         </div>
-        
+
         {!user && (
           <p className="text-sm text-muted-foreground">
-            You need to{" "}
+            You need to{' '}
             <a href="/auth/login" className="text-primary hover:underline">
               sign in
-            </a>{" "}
+            </a>{' '}
             to join or create exams
           </p>
         )}
@@ -160,7 +167,11 @@ function FeatureCard({
 function FileIcon() {
   return (
     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+      />
     </svg>
   )
 }
@@ -168,7 +179,11 @@ function FileIcon() {
 function CheckIcon() {
   return (
     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+      />
     </svg>
   )
 }
@@ -176,7 +191,11 @@ function CheckIcon() {
 function ChartIcon() {
   return (
     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+      />
     </svg>
   )
 }
@@ -184,7 +203,11 @@ function ChartIcon() {
 function MessageIcon() {
   return (
     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+      />
     </svg>
   )
 }

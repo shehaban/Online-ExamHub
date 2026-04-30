@@ -39,13 +39,18 @@ function TestComponent() {
         <>
           <div data-testid="no-user">No user logged in</div>
           <button
-            onClick={() => register({ email: 'test@test.com', password: 'password123', name: 'Test User', role: 'student' })}
+            onClick={() =>
+              register({
+                email: 'test@test.com',
+                password: 'password123',
+                name: 'Test User',
+                role: 'student',
+              })
+            }
           >
             Register
           </button>
-          <button onClick={() => login('test@test.com', 'password123')}>
-            Login
-          </button>
+          <button onClick={() => login('test@test.com', 'password123')}>Login</button>
         </>
       )}
     </div>
@@ -66,7 +71,7 @@ describe('AuthContext', () => {
       </AuthProvider>
     )
 
-    expect(screen.getByTestId('no-user')).toBeInTheDocument()
+    expect(screen.getByTestId('no-user')).toBeTruthy()
   })
 
   it('should register a new user', async () => {
@@ -80,9 +85,9 @@ describe('AuthContext', () => {
     fireEvent.click(registerButton)
 
     await waitFor(() => {
-      expect(screen.getByTestId('user-name')).toHaveTextContent('Test User')
-      expect(screen.getByTestId('user-email')).toHaveTextContent('test@test.com')
-      expect(screen.getByTestId('user-role')).toHaveTextContent('student')
+      expect(screen.getByTestId('user-name').textContent).toBe('Test User')
+      expect(screen.getByTestId('user-email').textContent).toBe('test@test.com')
+      expect(screen.getByTestId('user-role').textContent).toBe('student')
     })
   })
 
@@ -111,7 +116,7 @@ describe('AuthContext', () => {
     fireEvent.click(loginButton)
 
     await waitFor(() => {
-      expect(screen.getByTestId('user-name')).toHaveTextContent('Test User')
+      expect(screen.getByTestId('user-name').textContent).toBe('Test User')
     })
   })
 
@@ -127,7 +132,7 @@ describe('AuthContext', () => {
     fireEvent.click(registerButton)
 
     await waitFor(() => {
-      expect(screen.getByTestId('user-name')).toBeInTheDocument()
+      expect(screen.getByTestId('user-name')).toBeTruthy()
     })
 
     // Then logout
@@ -135,7 +140,7 @@ describe('AuthContext', () => {
     fireEvent.click(logoutButton)
 
     await waitFor(() => {
-      expect(screen.getByTestId('no-user')).toBeInTheDocument()
+      expect(screen.getByTestId('no-user')).toBeTruthy()
     })
   })
 })

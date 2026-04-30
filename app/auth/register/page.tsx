@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
@@ -32,15 +32,15 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError("")
+    setError('')
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match")
+      setError('Passwords do not match')
       return
     }
 
     if (password.length < 6) {
-      setError("Password must be at least 6 characters")
+      setError('Password must be at least 6 characters')
       return
     }
 
@@ -54,12 +54,12 @@ export default function RegisterPage() {
     try {
       const result = await register({ number, password, name, role })
       if (result.success) {
-        router.push("/")
+        router.push('/')
       } else {
-        setError(result.error || "Registration failed")
+        setError(result.error || 'Registration failed')
       }
     } catch {
-      setError("An unexpected error occurred")
+      setError('An unexpected error occurred')
     } finally {
       setIsSubmitting(false)
     }
