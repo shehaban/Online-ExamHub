@@ -1,13 +1,13 @@
-"use client"
+'use client'
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { useAuth } from "@/lib/auth-context"
-import { Header } from "@/components/header"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/auth-context'
+import { Header } from '@/components/header'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -16,18 +16,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import {
-  Plus,
-  Search,
-  Users,
-  Clock,
-  BookOpen,
-  LogIn,
-  Lock,
-  Globe,
-} from "lucide-react"
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import { Plus, Search, Users, Clock, BookOpen, LogIn, Lock, Globe } from 'lucide-react'
 
 interface Room {
   id: string
@@ -45,55 +36,55 @@ interface Room {
 
 const DEMO_ROOMS: Room[] = [
   {
-    id: "1",
-    name: "Mathematics Final Exam",
-    code: "MATH-2024",
-    description: "End-of-semester final covering calculus, linear algebra and statistics.",
-    host: "Dr. Sarah Ahmed",
-    hostNumber: "INS-00101",
+    id: '1',
+    name: 'Mathematics Final Exam',
+    code: 'MATH-2024',
+    description: 'End-of-semester final covering calculus, linear algebra and statistics.',
+    host: 'Dr. Sarah Ahmed',
+    hostNumber: 'INS-00101',
     capacity: 50,
     enrolled: 34,
     isPrivate: false,
-    subject: "Mathematics",
+    subject: 'Mathematics',
     createdAt: new Date(Date.now() - 3600000).toISOString(),
   },
   {
-    id: "2",
-    name: "Physics Midterm",
-    code: "PHYS-MID1",
-    description: "Covers mechanics, thermodynamics and wave optics.",
-    host: "Prof. James Carter",
-    hostNumber: "INS-00204",
+    id: '2',
+    name: 'Physics Midterm',
+    code: 'PHYS-MID1',
+    description: 'Covers mechanics, thermodynamics and wave optics.',
+    host: 'Prof. James Carter',
+    hostNumber: 'INS-00204',
     capacity: 40,
     enrolled: 28,
     isPrivate: false,
-    subject: "Physics",
+    subject: 'Physics',
     createdAt: new Date(Date.now() - 7200000).toISOString(),
   },
   {
-    id: "3",
-    name: "Computer Science Quiz",
-    code: "CS-Q3",
-    description: "Data structures & algorithms — week 3 quiz.",
-    host: "Dr. Layla Hassan",
-    hostNumber: "INS-00312",
+    id: '3',
+    name: 'Computer Science Quiz',
+    code: 'CS-Q3',
+    description: 'Data structures & algorithms — week 3 quiz.',
+    host: 'Dr. Layla Hassan',
+    hostNumber: 'INS-00312',
     capacity: 60,
     enrolled: 55,
     isPrivate: true,
-    subject: "Computer Science",
+    subject: 'Computer Science',
     createdAt: new Date(Date.now() - 1800000).toISOString(),
   },
   {
-    id: "4",
-    name: "English Literature Essay",
-    code: "ENG-ESSAY",
-    description: "Timed essay exam on 19th century British novels.",
-    host: "Ms. Nora Williams",
-    hostNumber: "INS-00418",
+    id: '4',
+    name: 'English Literature Essay',
+    code: 'ENG-ESSAY',
+    description: 'Timed essay exam on 19th century British novels.',
+    host: 'Ms. Nora Williams',
+    hostNumber: 'INS-00418',
     capacity: 30,
     enrolled: 22,
     isPrivate: false,
-    subject: "English",
+    subject: 'English',
     createdAt: new Date(Date.now() - 10800000).toISOString(),
   },
 ]
@@ -111,18 +102,18 @@ export default function RoomsPage() {
   const { user, isLoading } = useAuth()
   const router = useRouter()
 
-  const [search, setSearch] = useState("")
-  const [joinCode, setJoinCode] = useState("")
-  const [createName, setCreateName] = useState("")
-  const [createDesc, setCreateDesc] = useState("")
-  const [createSubject, setCreateSubject] = useState("")
+  const [search, setSearch] = useState('')
+  const [joinCode, setJoinCode] = useState('')
+  const [createName, setCreateName] = useState('')
+  const [createDesc, setCreateDesc] = useState('')
+  const [createSubject, setCreateSubject] = useState('')
   const [createPrivate, setCreatePrivate] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
   const [rooms, setRooms] = useState<Room[]>(DEMO_ROOMS)
 
   useEffect(() => {
     if (!isLoading && !user) {
-      router.push("/auth/login")
+      router.push('/auth/login')
     }
   }, [user, isLoading, router])
 
@@ -141,7 +132,7 @@ export default function RoomsPage() {
     (r) =>
       r.name.toLowerCase().includes(search.toLowerCase()) ||
       r.subject.toLowerCase().includes(search.toLowerCase()) ||
-      r.code.toLowerCase().includes(search.toLowerCase()),
+      r.code.toLowerCase().includes(search.toLowerCase())
   )
 
   const handleJoinByCode = () => {
@@ -159,7 +150,7 @@ export default function RoomsPage() {
       id: crypto.randomUUID(),
       name: createName.trim(),
       code: `${createSubject.toUpperCase().slice(0, 4)}-${Math.floor(1000 + Math.random() * 9000)}`,
-      description: createDesc.trim() || "No description provided.",
+      description: createDesc.trim() || 'No description provided.',
       host: user.name,
       hostNumber: user.number,
       capacity: 50,
@@ -169,9 +160,9 @@ export default function RoomsPage() {
       createdAt: new Date().toISOString(),
     }
     setRooms((prev) => [newRoom, ...prev])
-    setCreateName("")
-    setCreateDesc("")
-    setCreateSubject("")
+    setCreateName('')
+    setCreateDesc('')
+    setCreateSubject('')
     setCreatePrivate(false)
     setCreateOpen(false)
   }
@@ -188,7 +179,7 @@ export default function RoomsPage() {
               Browse available rooms or join with a code
             </p>
           </div>
-          {user.role === "instructor" && (
+          {user.role === 'instructor' && (
             <Dialog open={createOpen} onOpenChange={setCreateOpen}>
               <DialogTrigger asChild>
                 <Button className="gap-2 shrink-0">
@@ -199,9 +190,7 @@ export default function RoomsPage() {
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Create a new room</DialogTitle>
-                  <DialogDescription>
-                    Set up an exam room for your students.
-                  </DialogDescription>
+                  <DialogDescription>Set up an exam room for your students.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-2">
                   <div className="space-y-2">
@@ -248,7 +237,10 @@ export default function RoomsPage() {
                   <Button variant="outline" onClick={() => setCreateOpen(false)}>
                     Cancel
                   </Button>
-                  <Button onClick={handleCreateRoom} disabled={!createName.trim() || !createSubject.trim()}>
+                  <Button
+                    onClick={handleCreateRoom}
+                    disabled={!createName.trim() || !createSubject.trim()}
+                  >
                     Create Room
                   </Button>
                 </DialogFooter>
@@ -266,7 +258,7 @@ export default function RoomsPage() {
                 placeholder="Enter room code e.g. MATH-2024"
                 value={joinCode}
                 onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                onKeyDown={(e) => e.key === "Enter" && handleJoinByCode()}
+                onKeyDown={(e) => e.key === 'Enter' && handleJoinByCode()}
                 className="font-mono"
               />
               <Button onClick={handleJoinByCode} disabled={!joinCode.trim()} className="shrink-0">
@@ -333,7 +325,9 @@ export default function RoomsPage() {
                       </div>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Users className="w-4 h-4 shrink-0" />
-                        <span>{room.enrolled} / {room.capacity} enrolled</span>
+                        <span>
+                          {room.enrolled} / {room.capacity} enrolled
+                        </span>
                       </div>
                       {/* Capacity bar */}
                       <div className="w-full bg-muted rounded-full h-1.5">
@@ -354,11 +348,11 @@ export default function RoomsPage() {
                     </div>
                     <Button
                       className="w-full gap-2"
-                      variant={room.isPrivate ? "outline" : "default"}
+                      variant={room.isPrivate ? 'outline' : 'default'}
                       onClick={() => handleJoinRoom(room)}
                     >
                       <LogIn className="w-4 h-4" />
-                      {room.isPrivate ? "Join with Code" : "Join Room"}
+                      {room.isPrivate ? 'Join with Code' : 'Join Room'}
                     </Button>
                   </CardContent>
                 </Card>

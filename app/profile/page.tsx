@@ -1,17 +1,17 @@
-"use client"
+'use client'
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { useAuth } from "@/lib/auth-context"
-import { Header } from "@/components/header"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/auth-context'
+import { Header } from '@/components/header'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   User,
   BookOpen,
@@ -21,19 +21,19 @@ import {
   CheckCircle2,
   Pencil,
   X,
-} from "lucide-react"
+} from 'lucide-react'
 
 export default function ProfilePage() {
   const { user, isLoading, updateUser } = useAuth()
   const router = useRouter()
 
   const [editing, setEditing] = useState(false)
-  const [nameInput, setNameInput] = useState("")
+  const [nameInput, setNameInput] = useState('')
   const [success, setSuccess] = useState(false)
 
   useEffect(() => {
     if (!isLoading && !user) {
-      router.push("/auth/login")
+      router.push('/auth/login')
     }
     if (user) {
       setNameInput(user.name)
@@ -53,16 +53,16 @@ export default function ProfilePage() {
 
   const getInitials = (name: string) =>
     name
-      .split(" ")
+      .split(' ')
       .map((n) => n[0])
-      .join("")
+      .join('')
       .toUpperCase()
       .slice(0, 2)
 
-  const joinedDate = new Date(user.createdAt).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
+  const joinedDate = new Date(user.createdAt).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
   })
 
   const handleSave = () => {
@@ -105,11 +105,20 @@ export default function ProfilePage() {
               <div className="flex-1 text-center sm:text-left space-y-2">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                   <h2 className="text-xl font-semibold text-foreground">{user.name}</h2>
-                  <Badge variant={user.role === "instructor" ? "default" : "secondary"} className="w-fit mx-auto sm:mx-0">
-                    {user.role === "instructor" ? (
-                      <><BookOpen className="w-3 h-3 mr-1" />Instructor</>
+                  <Badge
+                    variant={user.role === 'instructor' ? 'default' : 'secondary'}
+                    className="w-fit mx-auto sm:mx-0"
+                  >
+                    {user.role === 'instructor' ? (
+                      <>
+                        <BookOpen className="w-3 h-3 mr-1" />
+                        Instructor
+                      </>
                     ) : (
-                      <><GraduationCap className="w-3 h-3 mr-1" />Student</>
+                      <>
+                        <GraduationCap className="w-3 h-3 mr-1" />
+                        Student
+                      </>
                     )}
                   </Badge>
                 </div>
@@ -166,7 +175,7 @@ export default function ProfilePage() {
             <div className="space-y-2">
               <Label className="flex items-center gap-1.5">
                 <User className="w-4 h-4" />
-                {user.role === "instructor" ? "Instructor Number" : "Student Number"}
+                {user.role === 'instructor' ? 'Instructor Number' : 'Student Number'}
               </Label>
               <p className="text-sm text-foreground py-2 px-3 rounded-md bg-muted font-mono">
                 {user.number}
@@ -182,7 +191,9 @@ export default function ProfilePage() {
               <p className="text-sm text-foreground py-2 px-3 rounded-md bg-muted capitalize">
                 {user.role}
               </p>
-              <p className="text-xs text-muted-foreground">Your role is assigned at registration and cannot be changed.</p>
+              <p className="text-xs text-muted-foreground">
+                Your role is assigned at registration and cannot be changed.
+              </p>
             </div>
 
             {editing && (

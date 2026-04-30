@@ -31,7 +31,7 @@ function TestComponent() {
       {user ? (
         <>
           <div data-testid="user-name">{user.name}</div>
-          <div data-testid="user-email">{user.email}</div>
+          <div data-testid="user-number">{user.number}</div>
           <div data-testid="user-role">{user.role}</div>
           <button onClick={logout}>Logout</button>
         </>
@@ -41,7 +41,7 @@ function TestComponent() {
           <button
             onClick={() =>
               register({
-                email: 'test@test.com',
+                number: '1234',
                 password: 'password123',
                 name: 'Test User',
                 role: 'student',

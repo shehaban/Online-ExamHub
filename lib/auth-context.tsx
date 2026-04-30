@@ -18,7 +18,7 @@ interface AuthContextType {
   login: (number: string, password: string) => Promise<{ success: boolean; error?: string }>
   register: (data: RegisterData) => Promise<{ success: boolean; error?: string }>
   logout: () => void
-  updateUser: (data: Partial<Pick<User, "name" | "avatar">>) => void
+  updateUser: (data: Partial<Pick<User, 'name' | 'avatar'>>) => void
 }
 
 interface RegisterData {
@@ -76,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const foundUser = users.find((u) => u.number.toLowerCase() === number.toLowerCase())
 
     if (!foundUser) {
-      return { success: false, error: "No account found with this number" }
+      return { success: false, error: 'No account found with this number' }
     }
 
     if (passwords[foundUser.id] !== password) {
@@ -94,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const passwords = getStoredPasswords()
 
     if (users.some((u) => u.number.toLowerCase() === data.number.toLowerCase())) {
-      return { success: false, error: "An account with this number already exists" }
+      return { success: false, error: 'An account with this number already exists' }
     }
 
     const newUser: User = {
@@ -117,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { success: true }
   }, [])
 
-  const updateUser = useCallback((data: Partial<Pick<User, "name" | "avatar">>) => {
+  const updateUser = useCallback((data: Partial<Pick<User, 'name' | 'avatar'>>) => {
     setUser((prev) => {
       if (!prev) return null
       const updated = { ...prev, ...data }
