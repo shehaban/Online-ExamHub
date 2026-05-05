@@ -2,8 +2,6 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
 import Cookies from 'js-cookie'
-import { createClient } from '@/lib/supabase/client'
-import bcrypt from 'bcryptjs'
 
 export interface User {
   id: string
@@ -32,6 +30,7 @@ interface RegisterData {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+const USERS_KEY = 'exam_platform_users'
 const SESSION_KEY = 'exam_platform_session'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -39,125 +38,103 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const loadUser = async () => {
-      const sessionId = Cookies.get(SESSION_KEY)
-      if (sessionId) {
-        try {
-          const supabase = createClient()
-          const { data, error } = await supabase
-            .from('users')
-            .select('*')
-            .eq('user_id', sessionId)
-            .single()
-
-          if (!error && data) {
-            setUser({
-              id: data.user_id,
-              number: data.user_number,
-              name: data.name,
-              role: data.role === 'teacher' ? 'instructor' : 'student',
-              createdAt: data.created_at,
-            })
-          } else {
-            Cookies.remove(SESSION_KEY)
-          }
-        } catch (error) {
-          console.error('Failed to load user:', error)
-          Cookies.remove(SESSION_KEY)
-        }
+    const sessionId = Cookies.get(SESSION_KEY)
+    if (sessionId) {
+      const users = getStoredUsers()
+      const foundUser = users.find((u) => u.id === sessionId)
+      if (foundUser) {
+        setUser(foundUser)
       }
-      setIsLoading(false)
     }
-
-    loadUser()
+    setIsLoading(false)
   }, [])
 
-  const login = useCallback(async (number: string, password: string) => {
+  const getStoredUsers = (): User[] => {
+    if (typeof window === 'undefined') return []
+    const stored = localStorage.getItem(USERS_KEY)
+    if (!stored) return []
+
     try {
-      const supabase = createClient()
-      
-      const { data: userData, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('user_number', number)
-        .single()
-
-      if (error || !userData) {
-        return { success: false, error: 'No account found with this number' }
-      }
-
-      // Verify password
-      const isValidPassword = await bcrypt.compare(password, userData.password)
-      if (!isValidPassword) {
-        return { success: false, error: 'Invalid password' }
-      }
-
-      const loggedInUser: User = {
-        id: userData.user_id,
-        number: userData.user_number,
-        name: userData.name,
-        role: userData.role === 'teacher' ? 'instructor' : 'student',
-        createdAt: userData.created_at,
-      }
-
-      setUser(loggedInUser)
-      Cookies.set(SESSION_KEY, userData.user_id, { expires: 7 })
-
-      return { success: true }
+      return JSON.parse(stored) as User[]
     } catch (error) {
-      console.error('Login error:', error)
-      return { success: false, error: 'Login failed. Please try again.' }
+      console.error('Failed to parse stored users:', error)
+      localStorage.removeItem(USERS_KEY)
+      return []
     }
+  }
+
+  const saveUsers = (users: User[]) => {
+    localStorage.setItem(USERS_KEY, JSON.stringify(users))
+  }
+
+  const getStoredPasswords = (): Record<string, string> => {
+    if (typeof window === 'undefined') return {}
+    const stored = localStorage.getItem(`${USERS_KEY}_passwords`)
+    if (!stored) return {}
+
+    try {
+      return JSON.parse(stored) as Record<string, string>
+    } catch (error) {
+      console.error('Failed to parse stored passwords:', error)
+      localStorage.removeItem(`${USERS_KEY}_passwords`)
+      return {}
+    }
+  }
+
+  const savePasswords = (passwords: Record<string, string>) => {
+    localStorage.setItem(`${USERS_KEY}_passwords`, JSON.stringify(passwords))
+  }
+
+  const login = useCallback(async (number: string, password: string) => {
+    const users = getStoredUsers()
+    const passwords = getStoredPasswords()
+
+    const foundUser = users.find(
+      (u) => String(u.number ?? '').toLowerCase() === number.toLowerCase()
+    )
+
+    if (!foundUser) {
+      return { success: false, error: 'No account found with this number' }
+    }
+
+    if (passwords[foundUser.id] !== password) {
+      return { success: false, error: 'Invalid password' }
+    }
+
+    setUser(foundUser)
+    Cookies.set(SESSION_KEY, foundUser.id, { expires: 7 })
+
+    return { success: true }
   }, [])
 
   const register = useCallback(async (data: RegisterData) => {
     try {
-      const supabase = createClient()
+      const users = getStoredUsers()
+      const passwords = getStoredPasswords()
 
-      // Check if user already exists
-      const { data: existingUser } = await supabase
-        .from('users')
-        .select('user_id')
-        .eq('user_number', data.number)
-        .single()
-
-      if (existingUser) {
+      if (users.some((u) => String(u.number ?? '').toLowerCase() === data.number.toLowerCase())) {
         return { success: false, error: 'An account with this number already exists' }
       }
 
-      // Hash password
-      const hashedPassword = await bcrypt.hash(data.password, 10)
-
-      // Map 'instructor' role to 'teacher' for database
-      const dbRole = data.role === 'instructor' ? 'teacher' : 'student'
-
-      // Insert new user
-      const { data: newUserData, error } = await supabase
-        .from('users')
-        .insert({
-          user_number: data.number,
-          name: data.name,
-          password: hashedPassword,
-          role: dbRole,
-        })
-        .select()
-        .single()
-
-      if (error) {
-        console.error('Registration error:', error)
-        return { success: false, error: 'Registration failed. Please try again.' }
-      }
-
       const newUser: User = {
-        id: newUserData.user_id,
-        number: newUserData.user_number,
-        name: newUserData.name,
+        id:
+          typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+            ? crypto.randomUUID()
+            : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
+        number: data.number,
+        name: data.name,
         role: data.role,
-        createdAt: newUserData.created_at,
+        createdAt: new Date().toISOString(),
       }
+
+      users.push(newUser)
+      passwords[newUser.id] = data.password
+
+      saveUsers(users)
+      savePasswords(passwords)
 
       setUser(newUser)
-      Cookies.set(SESSION_KEY, newUserData.user_id, { expires: 7 })
+      Cookies.set(SESSION_KEY, newUser.id, { expires: 7 })
 
       return { success: true }
     } catch (error) {
@@ -166,24 +143,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const updateUser = useCallback(async (data: Partial<Pick<User, 'name' | 'avatar'>>) => {
-    if (!user) return
-
-    try {
-      const supabase = createClient()
-      
-      const { error } = await supabase
-        .from('users')
-        .update({ name: data.name })
-        .eq('user_id', user.id)
-
-      if (!error) {
-        setUser((prev) => prev ? { ...prev, ...data } : null)
+  const updateUser = useCallback((data: Partial<Pick<User, 'name' | 'avatar'>>) => {
+    setUser((prev) => {
+      if (!prev) return null
+      const updated = { ...prev, ...data }
+      const users = getStoredUsers()
+      const idx = users.findIndex((u) => u.id === prev.id)
+      if (idx !== -1) {
+        users[idx] = updated
+        saveUsers(users)
       }
-    } catch (error) {
-      console.error('Update user error:', error)
-    }
-  }, [user])
+      return updated
+    })
+  }, [])
 
   const logout = useCallback(() => {
     setUser(null)
