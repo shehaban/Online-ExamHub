@@ -30,116 +30,111 @@ interface RegisterData {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-const USERS_KEY = 'exam_platform_users'
-const SESSION_KEY = 'exam_platform_session'
+const TOKEN_KEY = 'exam_platform_token'
+const USER_KEY = 'exam_platform_user'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
+  // Restore session from token on mount
   useEffect(() => {
-    const sessionId = Cookies.get(SESSION_KEY)
-    if (sessionId) {
-      const users = getStoredUsers()
-      const foundUser = users.find((u) => u.id === sessionId)
-      if (foundUser) {
-        setUser(foundUser)
+    const restoreSession = async () => {
+      const token = Cookies.get(TOKEN_KEY)
+      const storedUser = localStorage.getItem(USER_KEY)
+
+      if (token && storedUser) {
+        try {
+          // Verify token with server
+          const response = await fetch('/api/auth/session', {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          })
+
+          if (response.ok) {
+            const data = await response.json()
+            if (data.success && data.user) {
+              setUser(data.user)
+            } else {
+              // Token invalid, clear storage
+              clearStorage()
+            }
+          } else {
+            // Token invalid, clear storage
+            clearStorage()
+          }
+        } catch {
+          // Network error, try to use stored user data
+          try {
+            const parsedUser = JSON.parse(storedUser) as User
+            setUser(parsedUser)
+          } catch {
+            clearStorage()
+          }
+        }
       }
+
+      setIsLoading(false)
     }
-    setIsLoading(false)
+
+    restoreSession()
   }, [])
 
-  const getStoredUsers = (): User[] => {
-    if (typeof window === 'undefined') return []
-    const stored = localStorage.getItem(USERS_KEY)
-    if (!stored) return []
-
-    try {
-      return JSON.parse(stored) as User[]
-    } catch (error) {
-      console.error('Failed to parse stored users:', error)
-      localStorage.removeItem(USERS_KEY)
-      return []
-    }
-  }
-
-  const saveUsers = (users: User[]) => {
-    localStorage.setItem(USERS_KEY, JSON.stringify(users))
-  }
-
-  const getStoredPasswords = (): Record<string, string> => {
-    if (typeof window === 'undefined') return {}
-    const stored = localStorage.getItem(`${USERS_KEY}_passwords`)
-    if (!stored) return {}
-
-    try {
-      return JSON.parse(stored) as Record<string, string>
-    } catch (error) {
-      console.error('Failed to parse stored passwords:', error)
-      localStorage.removeItem(`${USERS_KEY}_passwords`)
-      return {}
-    }
-  }
-
-  const savePasswords = (passwords: Record<string, string>) => {
-    localStorage.setItem(`${USERS_KEY}_passwords`, JSON.stringify(passwords))
+  const clearStorage = () => {
+    Cookies.remove(TOKEN_KEY)
+    localStorage.removeItem(USER_KEY)
   }
 
   const login = useCallback(async (number: string, password: string) => {
-    const users = getStoredUsers()
-    const passwords = getStoredPasswords()
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ number, password }),
+      })
 
-    const foundUser = users.find(
-      (u) => String(u.number ?? '').toLowerCase() === number.toLowerCase()
-    )
+      const data = await response.json()
 
-    if (!foundUser) {
-      return { success: false, error: 'No account found with this number' }
+      if (data.success && data.user && data.token) {
+        setUser(data.user)
+        Cookies.set(TOKEN_KEY, data.token, { expires: 7 })
+        localStorage.setItem(USER_KEY, JSON.stringify(data.user))
+        return { success: true }
+      }
+
+      return { success: false, error: data.error || 'Login failed' }
+    } catch (error) {
+      console.error('Login error:', error)
+      return { success: false, error: 'An error occurred during login' }
     }
-
-    if (passwords[foundUser.id] !== password) {
-      return { success: false, error: 'Invalid password' }
-    }
-
-    setUser(foundUser)
-    Cookies.set(SESSION_KEY, foundUser.id, { expires: 7 })
-
-    return { success: true }
   }, [])
 
   const register = useCallback(async (data: RegisterData) => {
     try {
-      const users = getStoredUsers()
-      const passwords = getStoredPasswords()
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      })
 
-      if (users.some((u) => String(u.number ?? '').toLowerCase() === data.number.toLowerCase())) {
-        return { success: false, error: 'An account with this number already exists' }
+      const result = await response.json()
+
+      if (result.success && result.user && result.token) {
+        setUser(result.user)
+        Cookies.set(TOKEN_KEY, result.token, { expires: 7 })
+        localStorage.setItem(USER_KEY, JSON.stringify(result.user))
+        return { success: true }
       }
 
-      const newUser: User = {
-        id:
-          typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-            ? crypto.randomUUID()
-            : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
-        number: data.number,
-        name: data.name,
-        role: data.role,
-        createdAt: new Date().toISOString(),
-      }
-
-      users.push(newUser)
-      passwords[newUser.id] = data.password
-
-      saveUsers(users)
-      savePasswords(passwords)
-
-      setUser(newUser)
-      Cookies.set(SESSION_KEY, newUser.id, { expires: 7 })
-
-      return { success: true }
+      return { success: false, error: result.error || 'Registration failed' }
     } catch (error) {
       console.error('Registration error:', error)
-      return { success: false, error: 'Registration failed. Please try again.' }
+      return { success: false, error: 'An error occurred during registration' }
     }
   }, [])
 
@@ -147,19 +142,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser((prev) => {
       if (!prev) return null
       const updated = { ...prev, ...data }
-      const users = getStoredUsers()
-      const idx = users.findIndex((u) => u.id === prev.id)
-      if (idx !== -1) {
-        users[idx] = updated
-        saveUsers(users)
-      }
+      localStorage.setItem(USER_KEY, JSON.stringify(updated))
       return updated
     })
   }, [])
 
   const logout = useCallback(() => {
     setUser(null)
-    Cookies.remove(SESSION_KEY)
+    clearStorage()
   }, [])
 
   return (
