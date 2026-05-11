@@ -33,57 +33,79 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 const USERS_KEY = 'exam_platform_users'
 const SESSION_KEY = 'exam_platform_session'
 
+// Default admin account
+const DEFAULT_ADMIN: User = {
+  id: 'admin-mj-001',
+  number: 'mj',
+  name: 'MJ Admin',
+  role: 'instructor',
+  createdAt: new Date().toISOString(),
+}
+const DEFAULT_ADMIN_PASSWORD = '$dog1234'
+
+// Helper functions (defined outside component to be available at module level)
+const getStoredUsers = (): User[] => {
+  if (typeof window === 'undefined') return []
+  const stored = localStorage.getItem(USERS_KEY)
+  if (!stored) return []
+
+  try {
+    return JSON.parse(stored) as User[]
+  } catch (error) {
+    console.error('Failed to parse stored users:', error)
+    localStorage.removeItem(USERS_KEY)
+    return []
+  }
+}
+
+const saveUsers = (users: User[]) => {
+  localStorage.setItem(USERS_KEY, JSON.stringify(users))
+}
+
+const getStoredPasswords = (): Record<string, string> => {
+  if (typeof window === 'undefined') return {}
+  const stored = localStorage.getItem(`${USERS_KEY}_passwords`)
+  if (!stored) return {}
+
+  try {
+    return JSON.parse(stored) as Record<string, string>
+  } catch (error) {
+    console.error('Failed to parse stored passwords:', error)
+    localStorage.removeItem(`${USERS_KEY}_passwords`)
+    return {}
+  }
+}
+
+const savePasswords = (passwords: Record<string, string>) => {
+  localStorage.setItem(`${USERS_KEY}_passwords`, JSON.stringify(passwords))
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
+    // Seed default admin if not exists
+    const users = getStoredUsers()
+    const passwords = getStoredPasswords()
+    
+    if (!users.some((u) => u.id === DEFAULT_ADMIN.id)) {
+      users.push(DEFAULT_ADMIN)
+      passwords[DEFAULT_ADMIN.id] = DEFAULT_ADMIN_PASSWORD
+      saveUsers(users)
+      savePasswords(passwords)
+    }
+
     const sessionId = Cookies.get(SESSION_KEY)
     if (sessionId) {
-      const users = getStoredUsers()
-      const foundUser = users.find((u) => u.id === sessionId)
+      const updatedUsers = getStoredUsers()
+      const foundUser = updatedUsers.find((u) => u.id === sessionId)
       if (foundUser) {
         setUser(foundUser)
       }
     }
     setIsLoading(false)
   }, [])
-
-  const getStoredUsers = (): User[] => {
-    if (typeof window === 'undefined') return []
-    const stored = localStorage.getItem(USERS_KEY)
-    if (!stored) return []
-
-    try {
-      return JSON.parse(stored) as User[]
-    } catch (error) {
-      console.error('Failed to parse stored users:', error)
-      localStorage.removeItem(USERS_KEY)
-      return []
-    }
-  }
-
-  const saveUsers = (users: User[]) => {
-    localStorage.setItem(USERS_KEY, JSON.stringify(users))
-  }
-
-  const getStoredPasswords = (): Record<string, string> => {
-    if (typeof window === 'undefined') return {}
-    const stored = localStorage.getItem(`${USERS_KEY}_passwords`)
-    if (!stored) return {}
-
-    try {
-      return JSON.parse(stored) as Record<string, string>
-    } catch (error) {
-      console.error('Failed to parse stored passwords:', error)
-      localStorage.removeItem(`${USERS_KEY}_passwords`)
-      return {}
-    }
-  }
-
-  const savePasswords = (passwords: Record<string, string>) => {
-    localStorage.setItem(`${USERS_KEY}_passwords`, JSON.stringify(passwords))
-  }
 
   const login = useCallback(async (number: string, password: string) => {
     const users = getStoredUsers()
