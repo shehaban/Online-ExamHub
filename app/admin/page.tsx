@@ -40,8 +40,7 @@ export default function AdminPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchType, setSearchType] = useState<SearchType>('users')
   const [allUsers, setAllUsers] = useState<User[]>([])
-  const [searchResult, setSearchResult] = useState<User | null>(null)
-  const [hasSearched, setHasSearched] = useState(false)
+  const [searchResults, setSearchResults] = useState<User[]>([])
 
   // Load all users from localStorage
   useEffect(() => {
@@ -69,25 +68,24 @@ export default function AdminPage() {
     return allUsers.filter((u) => u.role === 'student' || u.role === 'instructor')
   }, [allUsers, searchType])
 
-  // Search for user when query changes
+  // Search for users when query changes
   useEffect(() => {
     if (!searchQuery.trim()) {
-      setSearchResult(null)
-      setHasSearched(false)
+      // Show all users when search bar is empty
+      setSearchResults(filteredUsers)
       return
     }
 
-    setHasSearched(true)
     const query = searchQuery.toLowerCase().trim()
 
-    const found = filteredUsers.find(
+    const found = filteredUsers.filter(
       (u) =>
         u.number.toLowerCase() === query ||
         u.number.toLowerCase().includes(query) ||
         u.name.toLowerCase().includes(query)
     )
 
-    setSearchResult(found || null)
+    setSearchResults(found)
   }, [searchQuery, filteredUsers])
 
   // Redirect if not logged in or not an admin
@@ -161,8 +159,6 @@ export default function AdminPage() {
                   onValueChange={(value: SearchType) => {
                     setSearchType(value)
                     setSearchQuery('')
-                    setSearchResult(null)
-                    setHasSearched(false)
                   }}
                 >
                   <SelectTrigger id="searchType" className="w-full">
@@ -211,147 +207,113 @@ export default function AdminPage() {
         </Card>
 
         {/* Search Results */}
-        {hasSearched && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Search Results</CardTitle>
-              <CardDescription>
-                {searchResult
-                  ? `Found ${searchType === 'admins' ? 'admin' : 'user'} matching your search`
-                  : `No ${searchType === 'admins' ? 'admin' : 'user'} found matching "${searchQuery}"`}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {searchResult ? (
-                <div className="space-y-6">
-                  {/* User Header */}
-                  <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-                    <Avatar className="h-20 w-20 shrink-0">
-                      <AvatarFallback className="bg-primary text-primary-foreground text-xl font-bold">
-                        {getInitials(searchResult.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 text-center sm:text-left space-y-2">
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                        <h2 className="text-xl font-semibold text-foreground">
-                          {searchResult.name}
-                        </h2>
-                        <Badge
-                          variant={searchResult.role === 'admin' ? 'destructive' : searchResult.role === 'instructor' ? 'default' : 'secondary'}
-                          className="w-fit mx-auto sm:mx-0"
-                        >
-                          {searchResult.role === 'admin' ? (
-                            <>
-                              <ShieldCheck className="w-3 h-3 mr-1" />
-                              Admin
-                            </>
-                          ) : searchResult.role === 'instructor' ? (
-                            <>
-                              <BookOpen className="w-3 h-3 mr-1" />
-                              Instructor
-                            </>
-                          ) : (
-                            <>
-                              <GraduationCap className="w-3 h-3 mr-1" />
-                              Student
-                            </>
-                          )}
-                        </Badge>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">
+              {searchQuery.trim() ? 'Search Results' : `All ${searchType === 'admins' ? 'Admins' : 'Users'}`}
+            </CardTitle>
+            <CardDescription>
+              {searchResults.length > 0
+                ? `Found ${searchResults.length} ${searchType === 'admins' ? 'admin' : 'user'}${searchResults.length > 1 ? 's' : ''}${searchQuery.trim() ? ` matching "${searchQuery}"` : ''}`
+                : `No ${searchType === 'admins' ? 'admins' : 'users'} found${searchQuery.trim() ? ` matching "${searchQuery}"` : ''}`}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {searchResults.length > 0 ? (
+              <div className="space-y-4">
+                {searchResults.map((result) => (
+                  <Card key={result.id} className="overflow-hidden">
+                    <CardContent className="p-4">
+                      <div className="space-y-4">
+                        {/* User Header */}
+                        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+                          <Avatar className="h-16 w-16 shrink-0">
+                            <AvatarFallback className="bg-primary text-primary-foreground text-lg font-bold">
+                              {getInitials(result.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 text-center sm:text-left space-y-2">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                              <h2 className="text-lg font-semibold text-foreground">
+                                {result.name}
+                              </h2>
+                              <Badge
+                                variant={result.role === 'admin' ? 'destructive' : result.role === 'instructor' ? 'default' : 'secondary'}
+                                className="w-fit mx-auto sm:mx-0"
+                              >
+                                {result.role === 'admin' ? (
+                                  <>
+                                    <ShieldCheck className="w-3 h-3 mr-1" />
+                                    Admin
+                                  </>
+                                ) : result.role === 'instructor' ? (
+                                  <>
+                                    <BookOpen className="w-3 h-3 mr-1" />
+                                    Instructor
+                                  </>
+                                ) : (
+                                  <>
+                                    <GraduationCap className="w-3 h-3 mr-1" />
+                                    Student
+                                  </>
+                                )}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+
+                        <Separator />
+
+                        {/* User Details */}
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="space-y-1">
+                            <Label className="flex items-center gap-1.5 text-muted-foreground text-xs">
+                              <Hash className="w-3 h-3" />
+                              {result.role === 'admin' ? 'Admin' : result.role === 'instructor' ? 'Instructor' : 'Student'} Number
+                            </Label>
+                            <p className="text-sm text-foreground py-1.5 px-2 rounded-md bg-muted font-mono">
+                              {result.number}
+                            </p>
+                          </div>
+
+                          <div className="space-y-1">
+                            <Label className="flex items-center gap-1.5 text-muted-foreground text-xs">
+                              <CalendarDays className="w-3 h-3" />
+                              Joined Date
+                            </Label>
+                            <p className="text-sm text-foreground py-1.5 px-2 rounded-md bg-muted">
+                              {formatDate(result.createdAt)}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Internal ID */}
+                        <div className="space-y-1">
+                          <Label className="text-muted-foreground text-xs">Internal User ID</Label>
+                          <p className="text-xs text-muted-foreground py-1.5 px-2 rounded-md bg-muted font-mono break-all">
+                            {result.id}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* User Details */}
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-1.5 text-muted-foreground">
-                        <UserIcon className="w-4 h-4" />
-                        Full Name
-                      </Label>
-                      <p className="text-sm text-foreground py-2 px-3 rounded-md bg-muted">
-                        {searchResult.name}
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-1.5 text-muted-foreground">
-                        <Hash className="w-4 h-4" />
-                        {searchResult.role === 'admin' ? 'Admin' : searchResult.role === 'instructor' ? 'Instructor' : 'Student'} Number
-                      </Label>
-                      <p className="text-sm text-foreground py-2 px-3 rounded-md bg-muted font-mono">
-                        {searchResult.number}
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-1.5 text-muted-foreground">
-                        <ShieldCheck className="w-4 h-4" />
-                        Role
-                      </Label>
-                      <p className="text-sm text-foreground py-2 px-3 rounded-md bg-muted capitalize">
-                        {searchResult.role}
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-1.5 text-muted-foreground">
-                        <CalendarDays className="w-4 h-4" />
-                        Joined Date
-                      </Label>
-                      <p className="text-sm text-foreground py-2 px-3 rounded-md bg-muted">
-                        {formatDate(searchResult.createdAt)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Internal ID */}
-                  <div className="space-y-2">
-                    <Label className="text-muted-foreground">Internal User ID</Label>
-                    <p className="text-xs text-muted-foreground py-2 px-3 rounded-md bg-muted font-mono break-all">
-                      {searchResult.id}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-10 text-center">
-                  <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                    <AlertCircle className="w-6 h-6 text-muted-foreground" />
-                  </div>
-                  <p className="text-muted-foreground">
-                    No {searchType === 'admins' ? 'admin' : 'user'} found with that number or name.
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Try searching with a different term.
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Empty State */}
-        {!hasSearched && (
-          <Card>
-            <CardContent className="py-10">
-              <div className="flex flex-col items-center justify-center text-center">
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-10 text-center">
                 <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                  <Search className="w-6 h-6 text-muted-foreground" />
+                  <AlertCircle className="w-6 h-6 text-muted-foreground" />
                 </div>
                 <p className="text-muted-foreground">
-                  Enter a {searchType === 'admins' ? 'instructor' : 'student'} number or name to
-                  search
+                  No {searchType === 'admins' ? 'admins' : 'users'} found{searchQuery.trim() ? ` matching "${searchQuery}"` : ''}.
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Results will appear here
+                  {searchQuery.trim() ? 'Try searching with a different term.' : `No ${searchType === 'admins' ? 'admins' : 'users'} have been registered yet.`}
                 </p>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            )}
+          </CardContent>
+        </Card>
       </main>
     </div>
   )
