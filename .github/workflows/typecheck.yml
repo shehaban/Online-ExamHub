@@ -9,6 +9,9 @@ on:
 jobs:
   type-check:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
     strategy:
       matrix:
         package-manager: [bun, npm]
