@@ -80,26 +80,26 @@ export const deleteRoom = async (roomId) => {
 // ─── MEMBERS ────────────────────────────────────────────────────────────────
 
 export const addMember = async (roomId, studentId) => {
-  const [result] = await db.query(
-    'INSERT INTO room_members (room_id, student_id) VALUES (?, ?)',
-    [roomId, studentId]
-  )
+  const [result] = await db.query('INSERT INTO room_members (room_id, student_id) VALUES (?, ?)', [
+    roomId,
+    studentId,
+  ])
   return result
 }
 
 export const removeMember = async (roomId, studentId) => {
-  const [result] = await db.query(
-    'DELETE FROM room_members WHERE room_id = ? AND student_id = ?',
-    [roomId, studentId]
-  )
+  const [result] = await db.query('DELETE FROM room_members WHERE room_id = ? AND student_id = ?', [
+    roomId,
+    studentId,
+  ])
   return result
 }
 
 export const isMember = async (roomId, studentId) => {
-  const [rows] = await db.query(
-    'SELECT 1 FROM room_members WHERE room_id = ? AND student_id = ?',
-    [roomId, studentId]
-  )
+  const [rows] = await db.query('SELECT 1 FROM room_members WHERE room_id = ? AND student_id = ?', [
+    roomId,
+    studentId,
+  ])
   return rows.length > 0
 }
 
@@ -122,7 +122,14 @@ export const createMessage = async (roomId, senderId, senderName, senderRole, co
     'INSERT INTO messages (room_id, sender_id, sender_name, sender_role, content) VALUES (?, ?, ?, ?, ?)',
     [roomId, senderId, senderName, senderRole, content]
   )
-  return { message_id: result.insertId, room_id: roomId, sender_id: senderId, sender_name: senderName, sender_role: senderRole, content }
+  return {
+    message_id: result.insertId,
+    room_id: roomId,
+    sender_id: senderId,
+    sender_name: senderName,
+    sender_role: senderRole,
+    content,
+  }
 }
 
 export const getMessagesByRoom = async (roomId, limit = 50, offset = 0) => {
@@ -142,7 +149,13 @@ export const getMessagesByRoom = async (roomId, limit = 50, offset = 0) => {
 
 // ─── FILES ──────────────────────────────────────────────────────────────────
 
-export const createFileRecord = async ({ room_id, uploaded_by, file_name, file_url, file_size }) => {
+export const createFileRecord = async ({
+  room_id,
+  uploaded_by,
+  file_name,
+  file_url,
+  file_size,
+}) => {
   const [result] = await db.query(
     'INSERT INTO file_uploads (room_id, uploaded_by, file_name, file_url, file_size) VALUES (?, ?, ?, ?, ?)',
     [room_id, uploaded_by, file_name, file_url, file_size]
@@ -191,4 +204,3 @@ export const deleteFileRecord = async (fileId) => {
   const [result] = await db.query('DELETE FROM file_uploads WHERE file_id = ?', [fileId])
   return result
 }
-

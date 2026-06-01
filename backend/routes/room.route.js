@@ -28,25 +28,23 @@ const upload = multer({
 // ─── Room CRUD ──────────────────────────────────────────────────────────────
 
 // Create a room (teacher only)
-router
-  .route('/')
-  .post(verifyToken, allowedTo(userRoles.TEACHER), roomController.createNewRoom)
+router.route('/').post(verifyToken, allowedTo(userRoles.TEACHER), roomController.createNewRoom)
 
 // List rooms (any authenticated user)
-router
-  .route('/')
-  .get(verifyToken, roomController.listRooms)
+router.route('/').get(verifyToken, roomController.listRooms)
 
 // Teacher's own rooms
-router
-  .route('/my-rooms')
-  .get(verifyToken, allowedTo(userRoles.TEACHER), roomController.myRooms)
+router.route('/my-rooms').get(verifyToken, allowedTo(userRoles.TEACHER), roomController.myRooms)
 
 // Single room details & Update settings
 router
   .route('/:roomId')
   .get(verifyToken, roomController.getRoom)
-  .patch(verifyToken, allowedTo(userRoles.TEACHER, userRoles.ADMIN), roomController.updateRoomSettings)
+  .patch(
+    verifyToken,
+    allowedTo(userRoles.TEACHER, userRoles.ADMIN),
+    roomController.updateRoomSettings
+  )
   .delete(verifyToken, allowedTo(userRoles.TEACHER, userRoles.ADMIN), roomController.removeRoom)
 
 // ─── Join / Leave / Member Management ───────────────────────────────────────
@@ -61,7 +59,11 @@ router
 
 router
   .route('/:roomId/members/:studentId')
-  .delete(verifyToken, allowedTo(userRoles.TEACHER, userRoles.ADMIN), roomController.removeRoomMember)
+  .delete(
+    verifyToken,
+    allowedTo(userRoles.TEACHER, userRoles.ADMIN),
+    roomController.removeRoomMember
+  )
 
 // ─── Messages ───────────────────────────────────────────────────────────────
 
@@ -79,11 +81,15 @@ router
 router
   .route('/:roomId/files')
   .get(verifyToken, roomController.fetchFiles)
-  .post(verifyToken, allowedTo(userRoles.TEACHER, userRoles.ADMIN), upload.single('file'), roomController.uploadFile)
+  .post(
+    verifyToken,
+    allowedTo(userRoles.TEACHER, userRoles.ADMIN),
+    upload.single('file'),
+    roomController.uploadFile
+  )
 
 router
   .route('/:roomId/files/:fileId')
   .delete(verifyToken, allowedTo(userRoles.TEACHER, userRoles.ADMIN), roomController.removeFile)
-
 
 export default router

@@ -73,9 +73,9 @@ export const listRooms = asyncWrapper(async (req, res) => {
   let rooms = await getAllRooms(id)
 
   if (rule === 'ADMIN') {
-    rooms = rooms.map(room => ({
+    rooms = rooms.map((room) => ({
       ...room,
-      is_member: 1
+      is_member: 1,
     }))
   }
 
@@ -153,7 +153,9 @@ export const removeRoom = asyncWrapper(async (req, res, next) => {
   const isAdmin = rule === 'ADMIN'
 
   if (!isOwner && !isAdmin) {
-    return next(new AppError('Only the room owner or an admin can delete this room', 403, httpStatusText.FAIL))
+    return next(
+      new AppError('Only the room owner or an admin can delete this room', 403, httpStatusText.FAIL)
+    )
   }
 
   await deleteRoom(roomId)
@@ -255,7 +257,11 @@ export const sendMessage = asyncWrapper(async (req, res, next) => {
 
   if (!isOwner && !isAdmin) {
     return next(
-      new AppError('Only the teacher of this room or an admin can send messages', 403, httpStatusText.FAIL)
+      new AppError(
+        'Only the teacher of this room or an admin can send messages',
+        403,
+        httpStatusText.FAIL
+      )
     )
   }
 
@@ -323,7 +329,11 @@ export const uploadFile = asyncWrapper(async (req, res, next) => {
 
   if (!isOwner && !isAdmin) {
     return next(
-      new AppError('Only the teacher of this room or an admin can upload files', 403, httpStatusText.FAIL)
+      new AppError(
+        'Only the teacher of this room or an admin can upload files',
+        403,
+        httpStatusText.FAIL
+      )
     )
   }
 
@@ -561,4 +571,3 @@ export const removeFile = asyncWrapper(async (req, res, next) => {
     message: 'File deleted successfully',
   })
 })
-
