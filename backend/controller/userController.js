@@ -48,7 +48,7 @@ export const register = asyncWrapper(async (req, res, next) => {
 
   const token = await generateJWT({
     user_number: newUser.user_number,
-    id: newUser.id,
+    id: newUser.id || newUser.user_id || newUser.admin_id,
     rule: newUser.rule,
   })
   newUser.token = token
@@ -107,7 +107,7 @@ export const login = asyncWrapper(async (req, res, next) => {
     const token = await generateJWT({
       user_number: user.user_number,
       name: user.name,
-      id: user.id,
+      id: user.id || user.user_id || user.admin_id,
       rule: role,
     })
 
@@ -115,7 +115,14 @@ export const login = asyncWrapper(async (req, res, next) => {
     const { password: _, ...userInfo } = user
     return res.status(200).json({
       status: httpStatusText.SUCCESS,
-      data: { token, user: { ...userInfo, rule: role } },
+      data: {
+        token,
+        user: {
+          ...userInfo,
+          rule: role,
+          id: user.id || user.user_id || user.admin_id,
+        },
+      },
     })
   } else {
     const error = new AppError('Incorrect credentials', 401, httpStatusText.ERROR)

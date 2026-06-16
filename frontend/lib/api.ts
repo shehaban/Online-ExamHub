@@ -25,3 +25,27 @@ export async function apiRequest(endpoint: string, options: RequestInit = {}) {
 
   return data
 }
+
+/**
+ * Upload a file via multipart/form-data.
+ * Do NOT set Content-Type — the browser sets the correct multipart boundary.
+ */
+export async function apiUpload(endpoint: string, formData: FormData) {
+  const token = getAuthToken()
+
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    method: 'POST',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: formData,
+  })
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    throw new Error(data.message || data.error || 'Upload failed')
+  }
+
+  return data
+}
