@@ -11,8 +11,8 @@ const db = mysql.createPool({
   port: 4000,
 
   ssl: {
-    rejectUnauthorized: false
-  }
+    rejectUnauthorized: false,
+  },
 })
 
 // Test connection on startup
