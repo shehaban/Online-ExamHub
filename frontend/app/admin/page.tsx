@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth, type User } from '@/lib/auth-context'
 import { apiRequest } from '@/lib/api'
@@ -30,6 +31,7 @@ import {
 import {
   Search,
   Users,
+  ClipboardList,
   ShieldCheck,
   Hash,
   CalendarDays,
@@ -317,14 +319,22 @@ export default function AdminPage() {
     <div className="min-h-screen bg-background">
       <Header />
       <main className="container mx-auto px-4 py-10 max-w-3xl">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
-            <ShieldCheck className="w-5 h-5 text-primary-foreground" />
+        <div className="flex items-center justify-between gap-3 mb-8">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
+              <ShieldCheck className="w-5 h-5 text-primary-foreground" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Admin Panel</h1>
+              <p className="text-sm text-muted-foreground">Search and manage users</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Admin Panel</h1>
-            <p className="text-sm text-muted-foreground">Search and manage users</p>
-          </div>
+          <Button asChild variant="outline" className="gap-2">
+            <Link href="/exams">
+              <ClipboardList className="w-4 h-4" />
+              Exams
+            </Link>
+          </Button>
         </div>
 
         {/* Search Section */}

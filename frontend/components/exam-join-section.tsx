@@ -18,7 +18,7 @@ export function ExamJoinSection() {
       return
     }
     if (examCode.trim()) {
-      router.push(`/exam/${examCode.trim()}`)
+      router.push(`/exam/${encodeURIComponent(examCode.trim().toUpperCase())}`)
     }
   }
 

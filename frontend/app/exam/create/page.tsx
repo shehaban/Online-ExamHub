@@ -1,7 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { saveExam } from '@/lib/exam-store'
 import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,6 +24,7 @@ import {
   CheckCircle2,
   CircleHelp,
   ListChecks,
+  Pencil,
   Plus,
   Send,
   Sparkles,
@@ -112,7 +115,9 @@ export default function CreateExamPage() {
           prompt: mcPrompt.trim(),
           options: filled.filter(Boolean),
           // recompute correct index after removing empty options before it
-          correctIndex: filled.slice(0, mcCorrect + 1).filter(Boolean).length - 1,
+          correctIndex: filled
+            .slice(0, mcCorrect + 1)
+            .filter(Boolean).length - 1,
         },
       ])
     }
@@ -134,7 +139,8 @@ export default function CreateExamPage() {
   const updateOption = (index: number, value: string) =>
     setMcOptions((prev) => prev.map((o, i) => (i === index ? value : o)))
 
-  const removeQuestion = (id: string) => setQuestions((prev) => prev.filter((q) => q.id !== id))
+  const removeQuestion = (id: string) =>
+    setQuestions((prev) => prev.filter((q) => q.id !== id))
 
   const handlePublish = () => {
     setError('')
@@ -146,6 +152,7 @@ export default function CreateExamPage() {
       setError('Add at least one question before publishing.')
       return
     }
+    saveExam(examCode, questions)
     setPublished(true)
   }
 
@@ -292,13 +299,7 @@ export default function CreateExamPage() {
                         </div>
                       ))}
                     </RadioGroup>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="gap-2"
-                      onClick={addOption}
-                    >
+                    <Button type="button" variant="outline" size="sm" className="gap-2" onClick={addOption}>
                       <Plus className="w-4 h-4" />
                       Add answer
                     </Button>
@@ -415,10 +416,19 @@ export default function CreateExamPage() {
                 Publish exam
               </Button>
               {published && (
-                <p className="text-sm text-primary flex items-center gap-1">
-                  <CheckCircle2 className="w-4 h-4" />
-                  Exam published with code {examCode.trim()}.
-                </p>
+                <div className="space-y-2">
+                  <p className="text-sm text-primary flex items-center gap-1">
+                    <CheckCircle2 className="w-4 h-4" />
+                    Published! Students can join with code{' '}
+                    <span className="font-semibold">{examCode.trim().toUpperCase()}</span>.
+                  </p>
+                  <Button variant="outline" size="sm" className="w-full gap-2" asChild>
+                    <Link href={`/exams/${encodeURIComponent(examCode.trim().toUpperCase())}`}>
+                      <Pencil className="w-4 h-4" />
+                      View &amp; edit questions
+                    </Link>
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>

@@ -1,7 +1,9 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { saveExam } from '@/lib/exam-store'
 import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,6 +19,7 @@ import {
   CheckCircle2,
   FileText,
   Loader2,
+  Pencil,
   Plus,
   Send,
   Sparkles,
@@ -71,7 +74,7 @@ function mockGenerate(source: string): GeneratedQuestion[] {
           prompt: `Which statement best relates to: "${sentence.slice(0, 60)}..."?`,
           options: [sentence, 'None of the above', 'Both A and C', 'Not mentioned'],
           correctIndex: 0,
-        }
+        },
   )
 }
 
@@ -115,8 +118,8 @@ export default function GenerateExamPage() {
   const updateOption = (id: string, index: number, value: string) =>
     setQuestions((prev) =>
       prev.map((q) =>
-        q.id === id ? { ...q, options: q.options?.map((o, i) => (i === index ? value : o)) } : q
-      )
+        q.id === id ? { ...q, options: q.options?.map((o, i) => (i === index ? value : o)) } : q,
+      ),
     )
 
   const updateCorrect = (id: string, index: number) =>
@@ -124,7 +127,7 @@ export default function GenerateExamPage() {
 
   const addOption = (id: string) =>
     setQuestions((prev) =>
-      prev.map((q) => (q.id === id ? { ...q, options: [...(q.options ?? []), ''] } : q))
+      prev.map((q) => (q.id === id ? { ...q, options: [...(q.options ?? []), ''] } : q)),
     )
 
   const removeOption = (id: string, index: number) =>
@@ -136,10 +139,11 @@ export default function GenerateExamPage() {
         if (index === correctIndex) correctIndex = 0
         else if (index < correctIndex) correctIndex -= 1
         return { ...q, options, correctIndex }
-      })
+      }),
     )
 
-  const removeQuestion = (id: string) => setQuestions((prev) => prev.filter((q) => q.id !== id))
+  const removeQuestion = (id: string) =>
+    setQuestions((prev) => prev.filter((q) => q.id !== id))
 
   const handlePublish = () => {
     setPublishError('')
@@ -151,6 +155,7 @@ export default function GenerateExamPage() {
       setPublishError('Generate at least one question before publishing.')
       return
     }
+    saveExam(examCode, questions)
     setPublished(true)
   }
 
@@ -398,10 +403,19 @@ export default function GenerateExamPage() {
               </div>
               {publishError && <p className="text-sm text-destructive mt-3">{publishError}</p>}
               {published && (
-                <p className="text-sm text-primary flex items-center gap-1 mt-3">
-                  <CheckCircle2 className="w-4 h-4" />
-                  Exam published with code {examCode.trim()}.
-                </p>
+                <div className="mt-3 space-y-2">
+                  <p className="text-sm text-primary flex items-center gap-1">
+                    <CheckCircle2 className="w-4 h-4" />
+                    Published! Students can join with code{' '}
+                    <span className="font-semibold">{examCode.trim().toUpperCase()}</span>.
+                  </p>
+                  <Button variant="outline" size="sm" className="gap-2" asChild>
+                    <Link href={`/exams/${encodeURIComponent(examCode.trim().toUpperCase())}`}>
+                      <Pencil className="w-4 h-4" />
+                      View &amp; edit questions
+                    </Link>
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>
