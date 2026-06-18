@@ -18,11 +18,7 @@ import httpStatusText from '../utils/httpStatusText.js'
 import bcrypt from 'bcrypt'
 import db from '../config/db.js' // added db import here for reset password function
 
-import {
-  createResetCode,
-  getResetCode,
-  deleteResetCode,
-} from '../models/passwordResetModel.js'
+import { createResetCode, getResetCode, deleteResetCode } from '../models/passwordResetModel.js'
 
 export const fetchAllUsers = asyncWrapper(async (req, res) => {
   const users = await getAllUsers()
@@ -141,89 +137,58 @@ export const login = asyncWrapper(async (req, res, next) => {
 
 // added forgot password and reset password functions for password reset functionality
 export const forgotPassword = asyncWrapper(async (req, res, next) => {
-
   const { email } = req.body
 
   const user = await getUserByEmail(email)
 
   if (!user) {
-
-    const error = new AppError(
-      'Email not found',
-      404,
-      httpStatusText.ERROR
-    )
+    const error = new AppError('Email not found', 404, httpStatusText.ERROR)
 
     return next(error)
   }
 
-  const verificationCode =
-    Math.floor(100000 + Math.random() * 900000).toString()
+  const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
 
-  await createResetCode(
-    user.user_id,
-    verificationCode
-  )
+  await createResetCode(user.user_id, verificationCode)
 
-  console.log(
-    'Verification code:',
-    verificationCode
-  )
+  console.log('Verification code:', verificationCode)
 
   return res.status(200).json({
-
     status: httpStatusText.SUCCESS,
 
-    message: 'Verification code generated'
-
+    message: 'Verification code generated',
   })
-
 })
 
 // added forgot password and reset password functions for password reset functionality here
 
 export const resetPassword = asyncWrapper(async (req, res, next) => {
-
   const { code, password } = req.body
 
   const resetData = await getResetCode(code)
 
   if (!resetData) {
-
-    const error = new AppError(
-      'Invalid verification code',
-      400,
-      httpStatusText.ERROR
-    )
+    const error = new AppError('Invalid verification code', 400, httpStatusText.ERROR)
 
     return next(error)
   }
 
-  const hashedPassword = await bcrypt.hash(
-    password,
-    10
-  )
+  const hashedPassword = await bcrypt.hash(password, 10)
 
   //const db = (await import('../config/db.js')).default
 
-  await db.query(
-    'UPDATE users SET password = ? WHERE user_id = ?',
-    [
-      hashedPassword,
-      resetData.user_id
-    ]
-  )
+  await db.query('UPDATE users SET password = ? WHERE user_id = ?', [
+    hashedPassword,
+    resetData.user_id,
+  ])
 
   await deleteResetCode(code)
 
   return res.status(200).json({
-
     status: httpStatusText.SUCCESS,
 
-    message: 'Password updated successfully'
-
+    message: 'Password updated successfully',
   })
-
 })
 
 export const unifiedSearch = asyncWrapper(async (req, res, next) => {

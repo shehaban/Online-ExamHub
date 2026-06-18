@@ -17,10 +17,7 @@ export const getUsersByName = async (username) => {
 
 // add a function to get user by email
 export const getUserByEmail = async (email) => {
-  const [rows] = await db.query(
-    'SELECT * FROM users WHERE email = ?',
-    [email]
-  )
+  const [rows] = await db.query('SELECT * FROM users WHERE email = ?', [email])
   return rows[0] || null
 }
 

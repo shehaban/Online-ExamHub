@@ -21,7 +21,7 @@ import { GraduationCap, AlertCircle, User, BookOpen, ArrowLeft } from 'lucide-re
 
 export default function RegisterPage() {
   const [name, setName] = useState('')
-  const [email, setEmail] = useState('')   // added email state here
+  const [email, setEmail] = useState('') // added email state here
   const [number, setNumber] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -60,7 +60,7 @@ export default function RegisterPage() {
     setIsSubmitting(true)
 
     try {
-      const result = await register({ number, password, name, role, email })  // added email to the register function here
+      const result = await register({ number, password, name, role, email }) // added email to the register function here
       if (result.success) {
         router.push('/')
       } else {
