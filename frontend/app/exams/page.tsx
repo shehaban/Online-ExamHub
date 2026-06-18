@@ -90,9 +90,7 @@ export default function ExamsPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-foreground">All Exams</h1>
-            <p className="text-sm text-muted-foreground">
-              Every published exam and its details
-            </p>
+            <p className="text-sm text-muted-foreground">Every published exam and its details</p>
           </div>
         </div>
 

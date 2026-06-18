@@ -26,15 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  ArrowLeft,
-  CheckCircle2,
-  ListChecks,
-  Plus,
-  Save,
-  Trash2,
-  FileQuestion,
-} from 'lucide-react'
+import { ArrowLeft, CheckCircle2, ListChecks, Plus, Save, Trash2, FileQuestion } from 'lucide-react'
 
 export default function ExamEditorPage() {
   const params = useParams<{ code: string }>()
@@ -64,8 +56,7 @@ export default function ExamEditorPage() {
   const updateQuestion = (id: string, patch: Partial<ExamQuestion>) =>
     setQuestions((prev) => prev.map((q) => (q.id === id ? { ...q, ...patch } : q)))
 
-  const removeQuestion = (id: string) =>
-    setQuestions((prev) => prev.filter((q) => q.id !== id))
+  const removeQuestion = (id: string) => setQuestions((prev) => prev.filter((q) => q.id !== id))
 
   const addQuestion = (type: QuestionType) => {
     const base: ExamQuestion =
@@ -86,15 +77,13 @@ export default function ExamEditorPage() {
       prev.map((q) =>
         q.id === id && q.options
           ? { ...q, options: q.options.map((o, i) => (i === index ? value : o)) }
-          : q,
-      ),
+          : q
+      )
     )
 
   const addOption = (id: string) =>
     setQuestions((prev) =>
-      prev.map((q) =>
-        q.id === id && q.options ? { ...q, options: [...q.options, ''] } : q,
-      ),
+      prev.map((q) => (q.id === id && q.options ? { ...q, options: [...q.options, ''] } : q))
     )
 
   const removeOption = (id: string, index: number) =>
@@ -106,7 +95,7 @@ export default function ExamEditorPage() {
         if (index === correctIndex) correctIndex = 0
         else if (index < correctIndex) correctIndex -= 1
         return { ...q, options, correctIndex }
-      }),
+      })
     )
 
   const handleSave = () => {

@@ -165,9 +165,7 @@ export default function TakeExamPage({ params }: { params: Promise<{ code: strin
                     </RadioGroup>
                   )}
                   {wrong && (
-                    <p className="text-xs text-destructive mt-3">
-                      Your answer was incorrect.
-                    </p>
+                    <p className="text-xs text-destructive mt-3">Your answer was incorrect.</p>
                   )}
                 </CardContent>
               </Card>

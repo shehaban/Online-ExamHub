@@ -68,7 +68,7 @@ export function examExists(code: string): boolean {
 export function getAllExams(): Exam[] {
   const all = readAll()
   return Object.values(all).sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   )
 }
 

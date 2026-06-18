@@ -74,7 +74,7 @@ function mockGenerate(source: string): GeneratedQuestion[] {
           prompt: `Which statement best relates to: "${sentence.slice(0, 60)}..."?`,
           options: [sentence, 'None of the above', 'Both A and C', 'Not mentioned'],
           correctIndex: 0,
-        },
+        }
   )
 }
 
@@ -118,8 +118,8 @@ export default function GenerateExamPage() {
   const updateOption = (id: string, index: number, value: string) =>
     setQuestions((prev) =>
       prev.map((q) =>
-        q.id === id ? { ...q, options: q.options?.map((o, i) => (i === index ? value : o)) } : q,
-      ),
+        q.id === id ? { ...q, options: q.options?.map((o, i) => (i === index ? value : o)) } : q
+      )
     )
 
   const updateCorrect = (id: string, index: number) =>
@@ -127,7 +127,7 @@ export default function GenerateExamPage() {
 
   const addOption = (id: string) =>
     setQuestions((prev) =>
-      prev.map((q) => (q.id === id ? { ...q, options: [...(q.options ?? []), ''] } : q)),
+      prev.map((q) => (q.id === id ? { ...q, options: [...(q.options ?? []), ''] } : q))
     )
 
   const removeOption = (id: string, index: number) =>
@@ -139,11 +139,10 @@ export default function GenerateExamPage() {
         if (index === correctIndex) correctIndex = 0
         else if (index < correctIndex) correctIndex -= 1
         return { ...q, options, correctIndex }
-      }),
+      })
     )
 
-  const removeQuestion = (id: string) =>
-    setQuestions((prev) => prev.filter((q) => q.id !== id))
+  const removeQuestion = (id: string) => setQuestions((prev) => prev.filter((q) => q.id !== id))
 
   const handlePublish = () => {
     setPublishError('')

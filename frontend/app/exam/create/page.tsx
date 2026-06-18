@@ -115,9 +115,7 @@ export default function CreateExamPage() {
           prompt: mcPrompt.trim(),
           options: filled.filter(Boolean),
           // recompute correct index after removing empty options before it
-          correctIndex: filled
-            .slice(0, mcCorrect + 1)
-            .filter(Boolean).length - 1,
+          correctIndex: filled.slice(0, mcCorrect + 1).filter(Boolean).length - 1,
         },
       ])
     }
@@ -139,8 +137,7 @@ export default function CreateExamPage() {
   const updateOption = (index: number, value: string) =>
     setMcOptions((prev) => prev.map((o, i) => (i === index ? value : o)))
 
-  const removeQuestion = (id: string) =>
-    setQuestions((prev) => prev.filter((q) => q.id !== id))
+  const removeQuestion = (id: string) => setQuestions((prev) => prev.filter((q) => q.id !== id))
 
   const handlePublish = () => {
     setError('')
@@ -299,7 +296,13 @@ export default function CreateExamPage() {
                         </div>
                       ))}
                     </RadioGroup>
-                    <Button type="button" variant="outline" size="sm" className="gap-2" onClick={addOption}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                      onClick={addOption}
+                    >
                       <Plus className="w-4 h-4" />
                       Add answer
                     </Button>
