@@ -27,6 +27,7 @@ interface RegisterData {
   password: string
   name: string
   role: 'student' | 'instructor' | 'admin'
+  email: string // added email field here
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -148,6 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             name: data.name,
             password: data.password,
             rule: mapFrontendRole(data.role),
+            email: data.email, // added email field here
           }),
         })
 

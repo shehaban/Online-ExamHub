@@ -104,6 +104,12 @@ export default function LoginPage() {
                   autoComplete="current-password"
                 />
               </div>
+              {/* here i added the forgot password link */}
+              <div className="flex justify-end">
+                <Link href="/auth/forgot-password" className="text-sm text-primary hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-4">
               <Button type="submit" className="w-full" disabled={isSubmitting}>

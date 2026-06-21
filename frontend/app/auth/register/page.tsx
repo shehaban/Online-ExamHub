@@ -21,6 +21,7 @@ import { GraduationCap, AlertCircle, User, BookOpen, ArrowLeft } from 'lucide-re
 
 export default function RegisterPage() {
   const [name, setName] = useState('')
+  const [email, setEmail] = useState('') // added email state here
   const [number, setNumber] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -59,7 +60,7 @@ export default function RegisterPage() {
     setIsSubmitting(true)
 
     try {
-      const result = await register({ number, password, name, role })
+      const result = await register({ number, password, name, role, email }) // added email to the register function here
       if (result.success) {
         router.push('/')
       } else {
@@ -153,6 +154,20 @@ export default function RegisterPage() {
                   onChange={(e) => setName(e.target.value)}
                   required
                   autoComplete="name"
+                />
+              </div>
+
+              {/*i added the email field here */}
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="example@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
                 />
               </div>
 

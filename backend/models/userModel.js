@@ -15,16 +15,22 @@ export const getUsersByName = async (username) => {
   return rows[0] || null
 }
 
+// add a function to get user by email
+export const getUserByEmail = async (email) => {
+  const [rows] = await db.query('SELECT * FROM users WHERE email = ?', [email])
+  return rows[0] || null
+}
+
 export const searchUsersByNamePartial = async (query) => {
   const [rows] = await db.query('SELECT * FROM users WHERE name LIKE ?', [`%${query}%`])
   return rows
 }
 
 export const createUser = async (user) => {
-  const { user_number, name, password, rule } = user
+  const { user_number, name, password, rule, email } = user
   const [result] = await db.query(
-    'INSERT INTO users (user_number, name, password, rule) VALUES (?, ?, ?, ?)',
-    [user_number, name, password, rule]
+    'INSERT INTO users (user_number, name, password, rule, email) VALUES (?, ?, ?, ?, ?)',
+    [user_number, name, password, rule, email]
   )
   return { id: result.insertId, ...user }
 }
