@@ -330,7 +330,7 @@ export default function GenerateExamPage() {
                       <RadioGroup
                         value={q.answerBool ? 'true' : 'false'}
                         onValueChange={(v) => updateBool(q.id, v === 'true')}
-                        className="flex gap-3"
+                        className="grid grid-cols-1 sm:grid-cols-2 gap-3"
                       >
                         <label
                           htmlFor={`${q.id}-true`}

@@ -439,7 +439,7 @@ export default function AdminPage() {
                 {searchResults.map((result) => (
                   <div
                     key={result.user_number}
-                    className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
                   >
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10 shrink-0">
@@ -454,7 +454,7 @@ export default function AdminPage() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 shrink-0">
                       <Button
                         variant="ghost"
                         size="icon-sm"

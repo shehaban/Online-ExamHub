@@ -270,7 +270,7 @@ export default function CreateExamContent() {
                     <RadioGroup
                       value={tfAnswer}
                       onValueChange={(v) => setTfAnswer(v as 'true' | 'false')}
-                      className="flex gap-3"
+                      className="grid grid-cols-1 sm:grid-cols-2 gap-3"
                     >
                       <label
                         htmlFor="tf-true"

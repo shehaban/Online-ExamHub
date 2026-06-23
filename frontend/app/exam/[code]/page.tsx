@@ -81,7 +81,7 @@ export default function TakeExamPage({ params }: { params: Promise<{ code: strin
     <div className="min-h-screen bg-background">
       <Header />
       <main className="container mx-auto px-4 py-10 max-w-3xl">
-        <div className="flex items-center justify-between gap-4 mb-8">
+        <div className="flex items-center justify-between gap-4 mb-8 flex-wrap">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
@@ -142,7 +142,7 @@ export default function TakeExamPage({ params }: { params: Promise<{ code: strin
                         }))
                       }
                       disabled={submitted}
-                      className="flex gap-3"
+                      className="grid grid-cols-1 sm:grid-cols-2 gap-3"
                     >
                       {['true', 'false'].map((val) => (
                         <label
