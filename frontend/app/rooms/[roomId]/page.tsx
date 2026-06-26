@@ -970,7 +970,7 @@ export default function RoomDetailPage() {
                             key={member.user_id}
                             className="flex items-center justify-between p-3.5 bg-card border rounded-xl hover:bg-accent/25 transition-all duration-200 shadow-sm"
                           >
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-3 min-w-0">
                               <Avatar className="w-8 h-8 border">
                                 <AvatarFallback className="bg-muted text-foreground text-xs font-semibold">
                                   {member.name.substring(0, 2).toUpperCase()}
@@ -986,7 +986,7 @@ export default function RoomDetailPage() {
                               </div>
                             </div>
                             <div className="flex items-center gap-3">
-                              <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
+                              <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-1 truncate">
                                 <Clock className="w-3 h-3" />
                                 Joined {timeAgo(member.joined_at)}
                               </span>
@@ -1036,7 +1036,7 @@ export default function RoomDetailPage() {
               </div>
               <div className="space-y-2">
                 <Label>Visibility</Label>
-                <div className="flex gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <Button
                     type="button"
                     variant={editVisibility === 'public' ? 'default' : 'outline'}

@@ -8,11 +8,21 @@ const db = mysql.createPool({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
+  port: process.env.DB_PORT,
+
+  ssl: {
+    rejectUnauthorized: false,
+  },
 })
 
-console.log('connected to mySQL.')
+// Test connection on startup
+db.getConnection()
+  .then((connection) => {
+    console.log('Successfully connected to MySQL database.')
+    connection.release()
+  })
+  .catch((err) => {
+    console.error('Failed to connect to MySQL database:', err.message)
+  })
 
 export default db

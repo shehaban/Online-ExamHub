@@ -17,19 +17,21 @@ export async function apiRequest(endpoint: string, options: RequestInit = {}) {
     },
   })
 
-  const data = await response.json()
+  let data
+  const text = await response.text()
+
+  try {
+    data = JSON.parse(text)
+  } catch {
+    throw new Error(`Server returned non-JSON response: ${text.substring(0, 200)}`)
+  }
 
   if (!response.ok) {
-    throw new Error(data.message || data.error || 'API Request failed')
+    throw new Error(data?.message || data?.error || `HTTP ${response.status}`)
   }
 
   return data
 }
-
-/**
- * Upload a file via multipart/form-data.
- * Do NOT set Content-Type — the browser sets the correct multipart boundary.
- */
 export async function apiUpload(endpoint: string, formData: FormData) {
   const token = getAuthToken()
 
@@ -40,6 +42,13 @@ export async function apiUpload(endpoint: string, formData: FormData) {
     },
     body: formData,
   })
+
+  const contentType = response.headers.get('content-type')
+
+  if (!contentType?.includes('application/json')) {
+    const text = await response.text()
+    throw new Error(`Expected JSON but got: ${text.slice(0, 200)}`)
+  }
 
   const data = await response.json()
 
