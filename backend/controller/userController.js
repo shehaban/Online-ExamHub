@@ -4,13 +4,15 @@ import {
   createUser,
   getUsersByName,
   getUserByNumber,
-  getUserByEmail, //added email to the user model and controller for forgot password functionality
+  getUserByEmail,
   searchUsersByNamePartial,
+  updateUserProfileByNumber,
 } from '../models/userModel.js'
 import {
   getAdminByName,
   getAdminByNumber,
   searchAdminsByNamePartial,
+  updateAdminProfileByNumber,
 } from '../models/adminModel.js'
 import AppError from '../utils/AppError.js'
 import generateJWT from '../utils/generateJWT.js'
@@ -63,6 +65,7 @@ export const register = asyncWrapper(async (req, res, next) => {
 
   const token = await generateJWT({
     user_number: newUser.user_number,
+    name: newUser.name,
     id: newUser.id || newUser.user_id || newUser.admin_id,
     rule: newUser.rule,
   })
@@ -250,5 +253,296 @@ export const unifiedSearch = asyncWrapper(async (req, res, next) => {
   return res.status(200).json({
     status: httpStatusText.SUCCESS,
     data: { results: safeResults },
+  })
+})
+
+export const updateProfile = asyncWrapper(async (req, res, next) => {
+  const { user_number, rule } = req.currentUser
+  const { name, email, avatar, password } = req.body
+
+  const updateData = {}
+  if (name !== undefined) updateData.name = name
+  if (email !== undefined) {
+    const trimmedEmail = email.trim()
+    if (trimmedEmail !== '') {
+      const existingUser = await getUserByEmail(trimmedEmail)
+      if (existingUser && existingUser.user_number !== user_number) {
+        return next(new AppError('This email is already registered', 400, httpStatusText.FAIL))
+      }
+    }
+    updateData.email = trimmedEmail === '' ? null : trimmedEmail
+  }
+  if (avatar !== undefined) updateData.avatar = avatar
+  if (password !== undefined && password !== '') {
+    updateData.password = await bcrypt.hash(password, 10)
+  }
+
+  let success = false
+  if (rule === 'ADMIN') {
+    success = await updateAdminProfileByNumber(user_number, updateData)
+  } else {
+    success = await updateUserProfileByNumber(user_number, updateData)
+  }
+
+  if (!success) {
+    return next(new AppError('Profile update failed', 400, httpStatusText.FAIL))
+  }
+
+  let updatedUser = null
+  if (rule === 'ADMIN') {
+    updatedUser = await getAdminByNumber(user_number)
+  } else {
+    updatedUser = await getUserByNumber(user_number)
+  }
+
+  if (!updatedUser) {
+    return next(new AppError('User not found', 404, httpStatusText.FAIL))
+  }
+
+  const { password: _, ...userInfo } = updatedUser
+
+  return res.status(200).json({
+    status: httpStatusText.SUCCESS,
+    data: {
+      user: {
+        ...userInfo,
+        rule,
+        id: updatedUser.id || updatedUser.user_id || updatedUser.admin_id,
+      },
+    },
+  })
+})
+
+export const getDashboardStats = asyncWrapper(async (req, res, next) => {
+  const { id: currentUserId, user_number, rule } = req.currentUser
+  const { studentId } = req.query
+
+  if (studentId && rule === 'ADMIN') {
+    const [[user]] = await db.query(`SELECT name, user_number FROM users WHERE user_id = ?`, [
+      studentId,
+    ])
+    if (!user) {
+      return next(new AppError('Student not found', 404, httpStatusText.FAIL))
+    }
+    const [submissions] = await db.query(
+      `SELECT es.exam_code, es.score, es.total, es.joined_at, es.finished_at, e.title
+       FROM exam_submissions es
+       JOIN exams e ON es.exam_code = e.code
+       WHERE es.user_id = ? AND es.finished_at IS NOT NULL
+       ORDER BY es.finished_at ASC`,
+      [studentId]
+    )
+
+    const totalExams = submissions.length
+    const avgScore =
+      totalExams > 0
+        ? submissions.reduce((acc, curr) => acc + (curr.score / curr.total) * 100, 0) / totalExams
+        : 0
+
+    return res.status(200).json({
+      status: httpStatusText.SUCCESS,
+      data: {
+        role: 'student',
+        studentName: user.name,
+        studentNumber: user.user_number,
+        stats: {
+          totalExams,
+          avgScore: Math.round(avgScore * 10) / 10,
+        },
+        submissions,
+      },
+    })
+  }
+
+  if (rule === 'STUDENT') {
+    const [submissions] = await db.query(
+      `SELECT es.exam_code, es.score, es.total, es.joined_at, es.finished_at, e.title
+       FROM exam_submissions es
+       JOIN exams e ON es.exam_code = e.code
+       WHERE es.user_id = ? AND es.finished_at IS NOT NULL
+       ORDER BY es.finished_at ASC`,
+      [currentUserId]
+    )
+
+    const totalExams = submissions.length
+    const avgScore =
+      totalExams > 0
+        ? submissions.reduce((acc, curr) => acc + (curr.score / curr.total) * 100, 0) / totalExams
+        : 0
+
+    return res.status(200).json({
+      status: httpStatusText.SUCCESS,
+      data: {
+        role: 'student',
+        stats: {
+          totalExams,
+          avgScore: Math.round(avgScore * 10) / 10,
+        },
+        submissions,
+      },
+    })
+  }
+
+  if (rule === 'TEACHER' || rule === 'INSTRUCTOR') {
+    const [exams] = await db.query(
+      `SELECT e.exam_id, e.code, e.title, e.created_at
+       FROM exams e
+       WHERE e.created_by = ?
+       ORDER BY e.created_at DESC`,
+      [user_number]
+    )
+
+    const examCodes = exams.map((e) => e.code)
+    let submissions = []
+    if (examCodes.length > 0) {
+      const [rows] = await db.query(
+        `SELECT exam_code, score, total, finished_at 
+         FROM exam_submissions 
+         WHERE exam_code IN (?) AND finished_at IS NOT NULL`,
+        [examCodes]
+      )
+      submissions = rows
+    }
+
+    const examsWithStats = exams.map((exam) => {
+      const examSubs = submissions.filter((s) => s.exam_code === exam.code)
+      const count = examSubs.length
+      const avg =
+        count > 0
+          ? examSubs.reduce((acc, curr) => acc + (curr.score / curr.total) * 100, 0) / count
+          : 0
+      const max = count > 0 ? Math.max(...examSubs.map((s) => (s.score / s.total) * 100)) : 0
+
+      return {
+        ...exam,
+        participant_count: count,
+        avg_score: Math.round(avg * 10) / 10,
+        max_score: Math.round(max * 10) / 10,
+      }
+    })
+
+    const totalCreated = exams.length
+    const totalParticipants = submissions.length
+    const overallAvg =
+      totalParticipants > 0
+        ? submissions.reduce((acc, curr) => acc + (curr.score / curr.total) * 100, 0) /
+          totalParticipants
+        : 0
+
+    return res.status(200).json({
+      status: httpStatusText.SUCCESS,
+      data: {
+        role: 'instructor',
+        stats: {
+          totalExams: totalCreated,
+          totalParticipants,
+          avgScore: Math.round(overallAvg * 10) / 10,
+        },
+        exams: examsWithStats,
+      },
+    })
+  }
+
+  if (rule === 'ADMIN') {
+    const [[{ count: studentCount }]] = await db.query(
+      "SELECT COUNT(*) as count FROM users WHERE rule = 'STUDENT'"
+    )
+    const [[{ count: teacherCount }]] = await db.query(
+      "SELECT COUNT(*) as count FROM users WHERE rule = 'TEACHER'"
+    )
+    const [[{ count: adminCount }]] = await db.query('SELECT COUNT(*) as count FROM admins')
+    const [[{ count: examCount }]] = await db.query('SELECT COUNT(*) as count FROM exams')
+    const [[{ count: roomCount }]] = await db.query('SELECT COUNT(*) as count FROM rooms')
+    const [[{ count: submissionCount }]] = await db.query(
+      'SELECT COUNT(*) as count FROM exam_submissions WHERE finished_at IS NOT NULL'
+    )
+    const [[{ avg: overallAvg }]] = await db.query(
+      'SELECT AVG(score / total * 100) as avg FROM exam_submissions WHERE finished_at IS NOT NULL'
+    )
+
+    const [recentSubmissions] = await db.query(
+      `SELECT es.exam_code, es.user_name, es.user_number, es.score, es.total, es.finished_at, e.title
+       FROM exam_submissions es
+       JOIN exams e ON es.exam_code = e.code
+       WHERE es.finished_at IS NOT NULL
+       ORDER BY es.finished_at DESC
+       LIMIT 10`
+    )
+
+    const [usersList] = await db.query(
+      `SELECT user_id as id, name, user_number, rule as role, email, avatar, created_at, 'user' as type FROM users
+       UNION ALL
+       SELECT admin_id as id, name, user_number, 'ADMIN' as role, email, avatar, created_at, 'admin' as type FROM admins
+       ORDER BY created_at DESC`
+    )
+
+    return res.status(200).json({
+      status: httpStatusText.SUCCESS,
+      data: {
+        role: 'admin',
+        stats: {
+          studentCount,
+          teacherCount,
+          adminCount,
+          examCount,
+          roomCount,
+          submissionCount,
+          overallAvg: overallAvg ? Math.round(overallAvg * 10) / 10 : 0,
+        },
+        recentSubmissions,
+        users: usersList,
+      },
+    })
+  }
+
+  return next(new AppError('Unauthorized role', 403, httpStatusText.FAIL))
+})
+
+export const getPublicStats = asyncWrapper(async (req, res, next) => {
+  const [[{ count: studentCount }]] = await db.query(
+    "SELECT COUNT(*) as count FROM users WHERE rule = 'STUDENT'"
+  )
+  const [[{ count: teacherCount }]] = await db.query(
+    "SELECT COUNT(*) as count FROM users WHERE rule = 'TEACHER'"
+  )
+  const [[{ count: examCount }]] = await db.query('SELECT COUNT(*) as count FROM exams')
+  const [[{ count: submissionCount }]] = await db.query(
+    'SELECT COUNT(*) as count FROM exam_submissions WHERE finished_at IS NOT NULL'
+  )
+
+  res.status(200).json({
+    status: httpStatusText.SUCCESS,
+    data: {
+      studentCount: studentCount || 0,
+      teacherCount: teacherCount || 0,
+      examCount: examCount || 0,
+      submissionCount: submissionCount || 0,
+    },
+  })
+})
+
+export const getSystemSettings = asyncWrapper(async (req, res, next) => {
+  const [rows] = await db.query('SELECT setting_key, setting_value FROM system_settings')
+  const settings = {}
+  rows.forEach((r) => {
+    settings[r.setting_key] = r.setting_value
+  })
+  res.status(200).json({
+    status: httpStatusText.SUCCESS,
+    data: { settings },
+  })
+})
+
+export const updateSystemSettings = asyncWrapper(async (req, res, next) => {
+  const settings = req.body
+  for (const [key, value] of Object.entries(settings)) {
+    await db.query(
+      'INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?',
+      [key, String(value), String(value)]
+    )
+  }
+  res.status(200).json({
+    status: httpStatusText.SUCCESS,
+    message: 'System settings updated successfully',
   })
 })

@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   GraduationCap,
   LogOut,
@@ -41,11 +41,13 @@ export function Header({ showLogo = true }: { showLogo?: boolean } = {}) {
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between px-4 mx-auto">
         {showLogo && (
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
-              <GraduationCap className="w-5 h-5 text-primary-foreground" />
+          <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-sm">
+              <GraduationCap className="w-5 h-5 text-white" />
             </div>
-            <span className="text-lg font-semibold text-foreground">ExamHub</span>
+            <span className="text-lg font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+              ExamHub
+            </span>
           </Link>
         )}
         <nav className="flex items-center gap-2 sm:gap-4 ml-auto">
@@ -70,8 +72,12 @@ export function Header({ showLogo = true }: { showLogo?: boolean } = {}) {
               </span>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+                  <Button
+                    variant="ghost"
+                    className="relative h-9 w-9 rounded-full p-0 overflow-hidden"
+                  >
                     <Avatar className="h-9 w-9">
+                      <AvatarImage src={user.avatar || undefined} alt={user.name} />
                       <AvatarFallback className="bg-primary text-primary-foreground text-sm">
                         {getInitials(user.name)}
                       </AvatarFallback>

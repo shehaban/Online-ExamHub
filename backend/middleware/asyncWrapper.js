@@ -5,3 +5,5 @@ export const asyncWrapper = (asyncFn) => {
     })
   }
 }
+
+export default asyncWrapper

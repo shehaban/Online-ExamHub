@@ -58,11 +58,16 @@ export default function LoginPage() {
         <Card className="w-full">
           <CardHeader className="space-y-4 text-center">
             <div className="flex justify-center">
-              <Link href="/" className="flex items-center gap-2">
-                <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
-                  <GraduationCap className="w-6 h-6 text-primary-foreground" />
+              <Link
+                href="/"
+                className="flex items-center gap-2 hover:opacity-90 transition-opacity"
+              >
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-sm">
+                  <GraduationCap className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-xl font-semibold text-foreground">ExamHub</span>
+                <span className="text-xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                  ExamHub
+                </span>
               </Link>
             </div>
             <div>

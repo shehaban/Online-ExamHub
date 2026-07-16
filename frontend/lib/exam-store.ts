@@ -1,3 +1,5 @@
+import { apiRequest } from './api'
+
 export type QuestionType = 'true_false' | 'multiple_choice'
 
 export interface ExamQuestion {
@@ -17,95 +19,142 @@ export interface ExamQuestion {
 }
 
 export interface Exam {
+  exam_id?: number
   code: string
+  title: string
   questions: ExamQuestion[]
-  createdAt: string
-  createdBy?: string
+  startAt?: string | null
+  endAt?: string | null
+  created_at?: string
+  createdAt?: string // compatibility with existing frontend
+  created_by?: string
+  createdBy?: string // compatibility with existing frontend
 }
-
-const STORAGE_KEY = 'exam_platform_published_exams'
 
 /** Normalizes a code so lookups are case-insensitive and trimmed. */
 export function normalizeCode(code: string): string {
   return code.trim().toUpperCase()
 }
 
-function readAll(): Record<string, Exam> {
-  if (typeof window === 'undefined') return {}
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? (JSON.parse(raw) as Record<string, Exam>) : {}
-  } catch {
-    return {}
-  }
-}
-
-function writeAll(exams: Record<string, Exam>) {
-  if (typeof window === 'undefined') return
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(exams))
-}
-
 /**
- * Publishes (or overwrites) an exam under the given code.
+ * Publishes (or overwrites) an exam under the given code on the backend.
  * Returns the saved exam.
  */
-export function saveExam(code: string, questions: ExamQuestion[], createdBy: string): Exam {
+export async function saveExam(
+  code: string,
+  title: string,
+  questions: ExamQuestion[],
+  createdBy?: string,
+  startAt?: string | null,
+  endAt?: string | null
+): Promise<Exam> {
   const normalized = normalizeCode(code)
-  const all = readAll()
   // Ensure every question has a mark
   const finalQuestions = questions.map((q) => ({ ...q, mark: q.mark ?? 1 }))
-  const exam: Exam = {
-    code: normalized,
-    questions: finalQuestions,
-    createdAt: new Date().toISOString(),
-    createdBy,
+
+  const response = await apiRequest('/exams', {
+    method: 'POST',
+    body: JSON.stringify({
+      code: normalized,
+      title,
+      questions: finalQuestions,
+      created_by: createdBy,
+      startAt,
+      endAt,
+    }),
+  })
+
+  const exam = response.data.exam as Exam
+  const normalizedExam = exam as Exam & { start_at?: string | null; end_at?: string | null }
+  return {
+    ...normalizedExam,
+    startAt: normalizedExam.startAt ?? normalizedExam.start_at ?? null,
+    endAt: normalizedExam.endAt ?? normalizedExam.end_at ?? null,
+    createdAt: normalizedExam.created_at || normalizedExam.createdAt,
+    createdBy: normalizedExam.created_by || normalizedExam.createdBy,
   }
-  all[normalized] = exam
-  writeAll(all)
-  return exam
 }
 
 /** Returns the published exam for a code, or null if none exists. */
-export function getExam(code: string): Exam | null {
-  const all = readAll()
-  return all[normalizeCode(code)] ?? null
+export async function getExam(code: string): Promise<Exam | null> {
+  try {
+    const response = await apiRequest(`/exams/${encodeURIComponent(normalizeCode(code))}`)
+    const exam = response.data.exam as Exam
+    const normalizedExam = exam as Exam & { start_at?: string | null; end_at?: string | null }
+    return {
+      ...normalizedExam,
+      startAt: normalizedExam.startAt ?? normalizedExam.start_at ?? null,
+      endAt: normalizedExam.endAt ?? normalizedExam.end_at ?? null,
+      createdAt: normalizedExam.created_at || normalizedExam.createdAt,
+      createdBy: normalizedExam.created_by || normalizedExam.createdBy,
+    }
+  } catch (err) {
+    return null
+  }
 }
 
 /** Checks whether an exam exists for the given code. */
-export function examExists(code: string): boolean {
-  return getExam(code) !== null
+export async function examExists(code: string): Promise<boolean> {
+  const exam = await getExam(code)
+  return exam !== null
 }
 
-/** Returns all published exams, newest first. */
-export function getAllExams(): Exam[] {
-  const all = readAll()
-  return Object.values(all).sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  )
+/** Returns all published exams, newest first. Optional creator filter. */
+export async function getAllExams(creator?: string): Promise<Exam[]> {
+  const endpoint = creator ? `/exams?creator=${encodeURIComponent(creator)}` : '/exams'
+  const response = await apiRequest(endpoint)
+  const exams = response.data.exams as Exam[]
+  return exams.map((exam) => {
+    const normalizedExam = exam as Exam & { start_at?: string | null; end_at?: string | null }
+    return {
+      ...normalizedExam,
+      startAt: normalizedExam.startAt ?? normalizedExam.start_at ?? null,
+      endAt: normalizedExam.endAt ?? normalizedExam.end_at ?? null,
+      createdAt: normalizedExam.created_at || normalizedExam.createdAt,
+      createdBy: normalizedExam.created_by || normalizedExam.createdBy,
+    }
+  })
 }
 
 /** Replaces the questions of an existing exam. Returns the updated exam or null. */
-export function updateExamQuestions(code: string, questions: ExamQuestion[]): Exam | null {
-  const all = readAll()
-  const normalized = normalizeCode(code)
-  const existing = all[normalized]
-  if (!existing) return null
-  // Ensure every question has a mark
+export async function updateExamQuestions(
+  code: string,
+  questions: ExamQuestion[],
+  title?: string,
+  startAt?: string | null,
+  endAt?: string | null
+): Promise<Exam | null> {
   const finalQuestions = questions.map((q) => ({ ...q, mark: q.mark ?? 1 }))
-  const updated: Exam = { ...existing, questions: finalQuestions }
-  all[normalized] = updated
-  writeAll(all)
-  return updated
+  const response = await apiRequest(`/exams/${encodeURIComponent(normalizeCode(code))}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      title,
+      questions: finalQuestions,
+      startAt,
+      endAt,
+    }),
+  })
+  const exam = response.data.exam as Exam
+  const normalizedExam = exam as Exam & { start_at?: string | null; end_at?: string | null }
+  return {
+    ...normalizedExam,
+    startAt: normalizedExam.startAt ?? normalizedExam.start_at ?? null,
+    endAt: normalizedExam.endAt ?? normalizedExam.end_at ?? null,
+    createdAt: normalizedExam.created_at || normalizedExam.createdAt,
+    createdBy: normalizedExam.created_by || normalizedExam.createdBy,
+  }
 }
 
 /** Deletes an exam by code. Returns true if it existed. */
-export function deleteExam(code: string): boolean {
-  const all = readAll()
-  const normalized = normalizeCode(code)
-  if (!all[normalized]) return false
-  delete all[normalized]
-  writeAll(all)
-  return true
+export async function deleteExam(code: string): Promise<boolean> {
+  try {
+    await apiRequest(`/exams/${encodeURIComponent(normalizeCode(code))}`, {
+      method: 'DELETE',
+    })
+    return true
+  } catch {
+    return false
+  }
 }
 
 /** Generates a stable-ish unique id for a new question. */

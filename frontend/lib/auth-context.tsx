@@ -11,6 +11,7 @@ export interface User {
   role: 'student' | 'instructor' | 'admin'
   createdAt: string
   avatar?: string
+  email?: string
 }
 
 interface AuthContextType {
@@ -19,7 +20,12 @@ interface AuthContextType {
   login: (number: string, password: string) => Promise<{ success: boolean; error?: string }>
   register: (data: RegisterData) => Promise<{ success: boolean; error?: string }>
   logout: () => void
-  updateUser: (data: Partial<Pick<User, 'name' | 'avatar'>>) => void
+  updateUser: (data: {
+    name?: string
+    email?: string
+    avatar?: string
+    password?: string
+  }) => Promise<{ success: boolean; error?: string }>
 }
 
 interface RegisterData {
@@ -62,7 +68,7 @@ function mapFrontendRole(role: string): string {
     case 'admin':
       return 'ADMIN'
     case 'instructor':
-      return 'TEACHER'
+      return 'INSTRUCTOR'
     default:
       return 'STUDENT'
   }
@@ -79,6 +85,7 @@ function mapBackendUser(raw: Record<string, unknown>): User {
     role: mapBackendRole(String(raw.rule ?? raw.role ?? 'STUDENT')),
     createdAt: String(raw.created_at ?? raw.createdAt ?? new Date().toISOString()),
     avatar: raw.avatar ? String(raw.avatar) : undefined,
+    email: raw.email ? String(raw.email) : undefined,
   }
 }
 
@@ -169,15 +176,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [persistSession]
   )
 
-  const updateUser = useCallback((data: Partial<Pick<User, 'name' | 'avatar'>>) => {
-    setUser((prev) => {
-      if (!prev) return null
-      const updated = { ...prev, ...data }
-      // Keep localStorage in sync
-      localStorage.setItem(USER_INFO_KEY, JSON.stringify(updated))
-      return updated
-    })
-  }, [])
+  const updateUser = useCallback(
+    async (data: { name?: string; email?: string; avatar?: string; password?: string }) => {
+      try {
+        const response = await apiRequest('/users/profile', {
+          method: 'PATCH',
+          body: JSON.stringify(data),
+        })
+        const updatedUser = mapBackendUser(response.data.user)
+        setUser(updatedUser)
+        localStorage.setItem(USER_INFO_KEY, JSON.stringify(updatedUser))
+        return { success: true }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to update profile'
+        return { success: false, error: message }
+      }
+    },
+    []
+  )
 
   const logout = useCallback(() => {
     setUser(null)

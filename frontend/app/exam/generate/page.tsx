@@ -4,7 +4,9 @@ import { useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { saveExam, examExists } from '@/lib/exam-store'
+import { useAuth } from '@/lib/auth-context'
 import { Header } from '@/components/header'
+import { formatDateTimeLocal } from '@/lib/exam-schedule'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -89,6 +91,7 @@ function mockGenerate(source: string): GeneratedQuestion[] {
 }
 
 export default function GenerateExamPage() {
+  const { user } = useAuth()
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -96,7 +99,11 @@ export default function GenerateExamPage() {
   const [fileName, setFileName] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
   const [questions, setQuestions] = useState<GeneratedQuestion[]>([])
+  const [examTitle, setExamTitle] = useState('')
   const [examCode, setExamCode] = useState('')
+  const [startAt, setStartAt] = useState('')
+  const [endAt, setEndAt] = useState('')
+  const [endAtManuallyEdited, setEndAtManuallyEdited] = useState(false)
   const [published, setPublished] = useState(false)
   const [publishError, setPublishError] = useState('')
   const [pendingCode, setPendingCode] = useState<string | null>(null)
@@ -155,28 +162,50 @@ export default function GenerateExamPage() {
 
   const removeQuestion = (id: string) => setQuestions((prev) => prev.filter((q) => q.id !== id))
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     setPublishError('')
     if (!examCode.trim()) {
       setPublishError('Please enter an exam code before publishing.')
+      return
+    }
+    if (!examTitle.trim()) {
+      setPublishError('Please enter an exam title before publishing.')
       return
     }
     if (questions.length === 0) {
       setPublishError('Generate at least one question before publishing.')
       return
     }
-    if (examExists(examCode)) {
-      setPendingCode(examCode.trim())
-      return
+    try {
+      const exists = await examExists(examCode)
+      if (exists) {
+        setPendingCode(examCode.trim())
+        return
+      }
+      await doPublish()
+    } catch (err) {
+      setPublishError(err instanceof Error ? err.message : 'Error checking exam existence')
     }
-    doPublish()
   }
 
-  const doPublish = () => {
-    const saved = saveExam(examCode, questions, '')
-    setExamCode(saved.code)
-    setPublished(true)
-    setPendingCode(null)
+  const toSqlDateTime = (value: string) => (value ? value.replace('T', ' ') : null)
+
+  const doPublish = async () => {
+    try {
+      const saved = await saveExam(
+        examCode,
+        examTitle,
+        questions,
+        String(user?.number) || '',
+        toSqlDateTime(startAt),
+        toSqlDateTime(endAt)
+      )
+      setExamCode(saved.code)
+      setPublished(true)
+      setPendingCode(null)
+    } catch (err) {
+      setPublishError(err instanceof Error ? err.message : 'Error saving exam to database')
+    }
   }
 
   return (
@@ -404,7 +433,19 @@ export default function GenerateExamPage() {
             </CardHeader>
             <CardContent>
               <div className="flex flex-col sm:flex-row sm:items-end gap-4">
-                <div className="space-y-2 flex-1">
+                <div className="space-y-2">
+                  <Label htmlFor="exam-title">Exam title</Label>
+                  <Input
+                    id="exam-title"
+                    placeholder="e.g. Midterm Mathematics"
+                    value={examTitle}
+                    onChange={(e) => {
+                      setExamTitle(e.target.value)
+                      setPublished(false)
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="exam-code">Exam code</Label>
                   <Input
                     id="exam-code"
@@ -412,6 +453,48 @@ export default function GenerateExamPage() {
                     value={examCode}
                     onChange={(e) => {
                       setExamCode(e.target.value)
+                      setPublished(false)
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="exam-start">Start</Label>
+                  <Input
+                    id="exam-start"
+                    type="datetime-local"
+                    value={startAt}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setStartAt(val)
+                      setPublished(false)
+                      if (val) {
+                        const newStartDate = new Date(val)
+                        if (!isNaN(newStartDate.getTime())) {
+                          const currentEndDate = endAt ? new Date(endAt) : null
+                          const needsUpdate =
+                            !endAt ||
+                            !endAtManuallyEdited ||
+                            (currentEndDate && newStartDate >= currentEndDate)
+                          if (needsUpdate) {
+                            const twoHoursLater = new Date(
+                              newStartDate.getTime() + 2 * 60 * 60 * 1000
+                            )
+                            setEndAt(formatDateTimeLocal(twoHoursLater))
+                          }
+                        }
+                      }
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="exam-end">End</Label>
+                  <Input
+                    id="exam-end"
+                    type="datetime-local"
+                    value={endAt}
+                    onChange={(e) => {
+                      setEndAt(e.target.value)
+                      setEndAtManuallyEdited(true)
                       setPublished(false)
                     }}
                   />

@@ -109,3 +109,52 @@ export const deleteUserByNumber = async (user_number) => {
 
   return result
 }
+
+export const ensureAdminProfileColumns = async () => {
+  try {
+    await db.query('ALTER TABLE admins ADD COLUMN email VARCHAR(255) NULL')
+  } catch (error) {
+    if (error.code !== 'ER_DUP_FIELDNAME' && error.errno !== 1060) {
+      console.error('Error adding admin email column:', error)
+    }
+  }
+  try {
+    await db.query('ALTER TABLE admins ADD COLUMN avatar VARCHAR(255) NULL')
+  } catch (error) {
+    if (error.code !== 'ER_DUP_FIELDNAME' && error.errno !== 1060) {
+      console.error('Error adding admin avatar column:', error)
+    }
+  }
+}
+
+export const updateAdminProfileByNumber = async (userNumber, { name, email, avatar, password }) => {
+  await ensureAdminProfileColumns()
+  const fields = []
+  const values = []
+
+  if (name !== undefined) {
+    fields.push('name = ?')
+    values.push(name)
+  }
+  if (email !== undefined) {
+    fields.push('email = ?')
+    values.push(email)
+  }
+  if (avatar !== undefined) {
+    fields.push('avatar = ?')
+    values.push(avatar)
+  }
+  if (password !== undefined) {
+    fields.push('password = ?')
+    values.push(password)
+  }
+
+  if (fields.length === 0) return true
+
+  values.push(userNumber)
+  const [result] = await db.query(
+    `UPDATE admins SET ${fields.join(', ')} WHERE user_number = ?`,
+    values
+  )
+  return result.affectedRows > 0
+}
