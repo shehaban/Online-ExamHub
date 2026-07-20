@@ -70,8 +70,8 @@ export default function ForgotPasswordPage() {
         <Card>
           <CardHeader className="space-y-4 text-center">
             <div className="flex justify-center">
-              <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
-                <GraduationCap className="w-6 h-6 text-primary-foreground" />
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-sm">
+                <GraduationCap className="w-6 h-6 text-white" />
               </div>
             </div>
 

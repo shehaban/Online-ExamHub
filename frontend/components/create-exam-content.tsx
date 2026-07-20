@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { formatDateTimeLocal } from '@/lib/exam-schedule'
 import { useAuth } from '@/lib/auth-context'
 import { saveExam, examExists } from '@/lib/exam-store'
 import { Header } from '@/components/header'
@@ -62,13 +63,23 @@ interface SavedQuestion {
 
 const uid = () => Math.random().toString(36).slice(2, 10)
 
-export default function CreateExamContent({ showLogo = true }: { showLogo?: boolean } = {}) {
+export default function CreateExamContent({
+  showLogo = true,
+  showHeader = true,
+}: {
+  showLogo?: boolean
+  showHeader?: boolean
+} = {}) {
   const { user } = useAuth()
   const router = useRouter()
 
   const [questions, setQuestions] = useState<SavedQuestion[]>([])
   const [type, setType] = useState<QuestionType>('true_false')
+  const [examTitle, setExamTitle] = useState('')
   const [examCode, setExamCode] = useState('')
+  const [startAt, setStartAt] = useState('')
+  const [endAt, setEndAt] = useState('')
+  const [endAtManuallyEdited, setEndAtManuallyEdited] = useState(false)
   const [published, setPublished] = useState(false)
 
   // current true/false draft
@@ -80,7 +91,7 @@ export default function CreateExamContent({ showLogo = true }: { showLogo?: bool
   const [mcPrompt, setMcPrompt] = useState('')
   const [mcOptions, setMcOptions] = useState<string[]>(['', '', '', ''])
   const [mcCorrect, setMcCorrect] = useState<number[]>([])
-  const [mcMark, setMcMark] = useState('1')
+  const [mcMark, setMcMark] = useState('0')
   const [mcOptionMarks, setMcOptionMarks] = useState<Record<number, number>>({})
 
   const [error, setError] = useState('')
@@ -95,14 +106,14 @@ export default function CreateExamContent({ showLogo = true }: { showLogo?: bool
     setMcPrompt('')
     setMcOptions(['', '', '', ''])
     setMcCorrect([])
-    setMcMark('1')
+    setMcMark('0')
     setMcOptionMarks({})
     setError('')
   }
 
   const parseMark = (v: string): number | undefined => {
     const n = parseInt(v, 10)
-    return isNaN(n) || n < 1 ? undefined : n
+    return isNaN(n) || n < 0 ? undefined : n
   }
 
   const handleNext = () => {
@@ -164,45 +175,99 @@ export default function CreateExamContent({ showLogo = true }: { showLogo?: bool
 
   const removeOption = (index: number) => {
     setMcOptions((prev) => prev.filter((_, i) => i !== index))
-    setMcCorrect((prev) => prev.filter((i) => i !== index).map((i) => (i > index ? i - 1 : i)))
+    setMcCorrect((prev) => {
+      const nextCorrect = prev.filter((i) => i !== index).map((i) => (i > index ? i - 1 : i))
+
+      const nextOptionMarks: Record<number, number> = {}
+      Object.keys(mcOptionMarks).forEach((keyStr) => {
+        const key = Number(keyStr)
+        if (key !== index) {
+          const newKey = key > index ? key - 1 : key
+          nextOptionMarks[newKey] = mcOptionMarks[key]
+        }
+      })
+      setMcOptionMarks(nextOptionMarks)
+
+      const sum = nextCorrect.reduce((acc, idx) => acc + (nextOptionMarks[idx] ?? 1), 0)
+      setMcMark(String(sum))
+
+      return nextCorrect
+    })
   }
 
   const updateOption = (index: number, value: string) =>
     setMcOptions((prev) => prev.map((o, i) => (i === index ? value : o)))
 
   const updateMcCorrect = (index: number, checked: boolean) => {
-    setMcCorrect((prev) => (checked ? [...prev, index] : prev.filter((i) => i !== index)))
+    setMcCorrect((prev) => {
+      const nextCorrect = checked ? [...prev, index] : prev.filter((i) => i !== index)
+
+      const nextOptionMarks = { ...mcOptionMarks }
+      if (checked) {
+        nextOptionMarks[index] = nextOptionMarks[index] ?? 1
+      } else {
+        delete nextOptionMarks[index]
+      }
+      setMcOptionMarks(nextOptionMarks)
+
+      const sum = nextCorrect.reduce((acc, idx) => acc + (nextOptionMarks[idx] ?? 1), 0)
+      setMcMark(String(sum))
+
+      return nextCorrect
+    })
   }
 
   const removeQuestion = (id: string) => setQuestions((prev) => prev.filter((q) => q.id !== id))
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     setError('')
     if (!examCode.trim()) {
       setError('Please enter an exam code before publishing.')
+      return
+    }
+    if (!examTitle.trim()) {
+      setError('Please enter an exam title before publishing.')
       return
     }
     if (questions.length === 0) {
       setError('Add at least one question before publishing.')
       return
     }
-    if (examExists(examCode)) {
-      setPendingCode(examCode.trim())
-      return
+    try {
+      const exists = await examExists(examCode)
+      if (exists) {
+        setPendingCode(examCode.trim())
+        return
+      }
+      await doPublish()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error checking exam existence')
     }
-    doPublish()
   }
 
-  const doPublish = () => {
-    const saved = saveExam(examCode, questions, String(user?.number) || '')
-    setExamCode(saved.code)
-    setPublished(true)
-    setPendingCode(null)
+  const toSqlDateTime = (value: string) => (value ? value.replace('T', ' ') : null)
+
+  const doPublish = async () => {
+    try {
+      const saved = await saveExam(
+        examCode,
+        examTitle,
+        questions,
+        String(user?.number) || '',
+        toSqlDateTime(startAt),
+        toSqlDateTime(endAt)
+      )
+      setExamCode(saved.code)
+      setPublished(true)
+      setPendingCode(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error saving exam to database')
+    }
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <Header showLogo={showLogo} />
+      {showHeader && <Header showLogo={showLogo} />}
       <main className="container mx-auto px-4 py-10 max-w-5xl">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div className="flex items-center gap-3">
@@ -347,11 +412,19 @@ export default function CreateExamContent({ showLogo = true }: { showLogo?: bool
                               min="1"
                               step="1"
                               placeholder="Pts"
-                              value={mcOptionMarks[index] || 1}
+                              value={mcOptionMarks[index] ?? 1}
                               onChange={(e) => {
                                 const val = parseInt(e.target.value, 10)
                                 if (!isNaN(val) && val >= 1) {
-                                  setMcOptionMarks((prev) => ({ ...prev, [index]: val }))
+                                  setMcOptionMarks((prev) => {
+                                    const nextOptionMarks = { ...prev, [index]: val }
+                                    const sum = mcCorrect.reduce(
+                                      (acc, idx) => acc + (nextOptionMarks[idx] ?? 1),
+                                      0
+                                    )
+                                    setMcMark(String(sum))
+                                    return nextOptionMarks
+                                  })
                                 }
                               }}
                               className="w-16"
@@ -384,15 +457,13 @@ export default function CreateExamContent({ showLogo = true }: { showLogo?: bool
                     </Button>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="mc-mark">Mark</Label>
+                    <Label htmlFor="mc-mark">Total Mark (Sum of correct options)</Label>
                     <Input
                       id="mc-mark"
                       type="number"
-                      min={1}
-                      placeholder="1"
                       value={mcMark}
-                      onChange={(e) => setMcMark(e.target.value)}
-                      className="w-24"
+                      readOnly
+                      className="w-24 bg-muted cursor-not-allowed"
                     />
                   </div>
                 </div>
@@ -496,6 +567,18 @@ export default function CreateExamContent({ showLogo = true }: { showLogo?: bool
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
+                <Label htmlFor="exam-title">Exam title</Label>
+                <Input
+                  id="exam-title"
+                  placeholder="e.g. Midterm Mathematics"
+                  value={examTitle}
+                  onChange={(e) => {
+                    setExamTitle(e.target.value)
+                    setPublished(false)
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="exam-code">Exam code</Label>
                 <Input
                   id="exam-code"
@@ -506,6 +589,50 @@ export default function CreateExamContent({ showLogo = true }: { showLogo?: bool
                     setPublished(false)
                   }}
                 />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="exam-start">Start date & time</Label>
+                  <Input
+                    id="exam-start"
+                    type="datetime-local"
+                    value={startAt}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setStartAt(val)
+                      setPublished(false)
+                      if (val) {
+                        const newStartDate = new Date(val)
+                        if (!isNaN(newStartDate.getTime())) {
+                          const currentEndDate = endAt ? new Date(endAt) : null
+                          const needsUpdate =
+                            !endAt ||
+                            !endAtManuallyEdited ||
+                            (currentEndDate && newStartDate >= currentEndDate)
+                          if (needsUpdate) {
+                            const twoHoursLater = new Date(
+                              newStartDate.getTime() + 2 * 60 * 60 * 1000
+                            )
+                            setEndAt(formatDateTimeLocal(twoHoursLater))
+                          }
+                        }
+                      }
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="exam-end">End date & time (optional)</Label>
+                  <Input
+                    id="exam-end"
+                    type="datetime-local"
+                    value={endAt}
+                    onChange={(e) => {
+                      setEndAt(e.target.value)
+                      setEndAtManuallyEdited(true)
+                      setPublished(false)
+                    }}
+                  />
+                </div>
               </div>
               <Button className="w-full gap-2" onClick={handlePublish}>
                 <Send className="w-4 h-4" />

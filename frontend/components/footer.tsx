@@ -33,11 +33,16 @@ export function Footer() {
       <div className="container mx-auto px-4 py-12 lg:py-16">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
           <div className="col-span-2 md:col-span-1">
-            <Link href="/" className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <GraduationCap className="w-4 h-4 text-primary-foreground" />
+            <Link
+              href="/"
+              className="flex items-center gap-2 mb-4 hover:opacity-90 transition-opacity"
+            >
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-sm">
+                <GraduationCap className="w-4 h-4 text-white" />
               </div>
-              <span className="text-lg font-semibold text-foreground">ExamHub</span>
+              <span className="text-lg font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                ExamHub
+              </span>
             </Link>
             <p className="text-sm text-muted-foreground">
               The modern platform for online examinations.

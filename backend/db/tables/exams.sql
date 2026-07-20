@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS exams (
+    exam_id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(50) UNIQUE NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    questions JSON NOT NULL,
+    created_by VARCHAR(50) NOT NULL,
+    start_at DATETIME NULL,
+    end_at DATETIME NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

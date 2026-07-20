@@ -27,14 +27,14 @@ const upload = multer({
 
 // ─── Room CRUD ──────────────────────────────────────────────────────────────
 
-// Create a room (teacher only)
-router.route('/').post(verifyToken, allowedTo(userRoles.TEACHER), roomController.createNewRoom)
+// Create a room (instructor only)
+router.route('/').post(verifyToken, allowedTo(userRoles.INSTRUCTOR), roomController.createNewRoom)
 
 // List rooms (any authenticated user)
 router.route('/').get(verifyToken, roomController.listRooms)
 
-// Teacher's own rooms
-router.route('/my-rooms').get(verifyToken, allowedTo(userRoles.TEACHER), roomController.myRooms)
+// Instructor's own rooms
+router.route('/my-rooms').get(verifyToken, allowedTo(userRoles.INSTRUCTOR), roomController.myRooms)
 
 // Single room details & Update settings
 router
@@ -42,10 +42,10 @@ router
   .get(verifyToken, roomController.getRoom)
   .patch(
     verifyToken,
-    allowedTo(userRoles.TEACHER, userRoles.ADMIN),
+    allowedTo(userRoles.INSTRUCTOR, userRoles.ADMIN),
     roomController.updateRoomSettings
   )
-  .delete(verifyToken, allowedTo(userRoles.TEACHER, userRoles.ADMIN), roomController.removeRoom)
+  .delete(verifyToken, allowedTo(userRoles.INSTRUCTOR, userRoles.ADMIN), roomController.removeRoom)
 
 // ─── Join / Leave / Member Management ───────────────────────────────────────
 
@@ -61,7 +61,7 @@ router
   .route('/:roomId/members/:studentId')
   .delete(
     verifyToken,
-    allowedTo(userRoles.TEACHER, userRoles.ADMIN),
+    allowedTo(userRoles.INSTRUCTOR, userRoles.ADMIN),
     roomController.removeRoomMember
   )
 
@@ -70,11 +70,15 @@ router
 router
   .route('/:roomId/messages')
   .get(verifyToken, roomController.fetchMessages)
-  .post(verifyToken, allowedTo(userRoles.TEACHER, userRoles.ADMIN), roomController.sendMessage)
+  .post(verifyToken, allowedTo(userRoles.INSTRUCTOR, userRoles.ADMIN), roomController.sendMessage)
 
 router
   .route('/:roomId/messages/:messageId')
-  .delete(verifyToken, allowedTo(userRoles.TEACHER, userRoles.ADMIN), roomController.removeMessage)
+  .delete(
+    verifyToken,
+    allowedTo(userRoles.INSTRUCTOR, userRoles.ADMIN),
+    roomController.removeMessage
+  )
 
 // ─── Files ──────────────────────────────────────────────────────────────────
 
@@ -83,13 +87,13 @@ router
   .get(verifyToken, roomController.fetchFiles)
   .post(
     verifyToken,
-    allowedTo(userRoles.TEACHER, userRoles.ADMIN),
+    allowedTo(userRoles.INSTRUCTOR, userRoles.ADMIN),
     upload.single('file'),
     roomController.uploadFile
   )
 
 router
   .route('/:roomId/files/:fileId')
-  .delete(verifyToken, allowedTo(userRoles.TEACHER, userRoles.ADMIN), roomController.removeFile)
+  .delete(verifyToken, allowedTo(userRoles.INSTRUCTOR, userRoles.ADMIN), roomController.removeFile)
 
 export default router

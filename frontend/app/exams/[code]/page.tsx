@@ -12,6 +12,7 @@ import {
   type ExamQuestion,
   type QuestionType,
 } from '@/lib/exam-store'
+import { toDatetimeLocalValue, toSqlDateTime, formatDateTimeLocal } from '@/lib/exam-schedule'
 import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -26,7 +27,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { ArrowLeft, CheckCircle2, ListChecks, Plus, Save, Trash2, FileQuestion } from 'lucide-react'
+import {
+  ArrowLeft,
+  CheckCircle2,
+  ListChecks,
+  Plus,
+  Save,
+  Trash2,
+  FileQuestion,
+  LayoutDashboard,
+} from 'lucide-react'
 
 export default function ExamEditorPage() {
   const params = useParams<{ code: string }>()
@@ -36,15 +46,33 @@ export default function ExamEditorPage() {
 
   const [exam, setExam] = useState<Exam | null>(null)
   const [questions, setQuestions] = useState<ExamQuestion[]>([])
+  const [examTitle, setExamTitle] = useState('')
+  const [startAt, setStartAt] = useState('')
+  const [endAt, setEndAt] = useState('')
+  const [endAtManuallyEdited, setEndAtManuallyEdited] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [savedAt, setSavedAt] = useState<number | null>(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    const found = getExam(code)
-    setExam(found)
-    setQuestions(found ? structuredClone(found.questions) : [])
-    setLoaded(true)
+    async function loadExam() {
+      try {
+        const found = await getExam(code)
+        setExam(found)
+        setQuestions(found ? structuredClone(found.questions) : [])
+        setExamTitle(found?.title ?? '')
+        setStartAt(toDatetimeLocalValue(found?.startAt))
+        setEndAt(toDatetimeLocalValue(found?.endAt))
+        if (found?.endAt) {
+          setEndAtManuallyEdited(true)
+        }
+      } catch (err) {
+        console.error('Failed to load exam:', err)
+      } finally {
+        setLoaded(true)
+      }
+    }
+    loadExam()
   }, [code])
 
   useEffect(() => {
@@ -68,6 +96,7 @@ export default function ExamEditorPage() {
             prompt: '',
             options: ['', '', '', ''],
             correctIndexes: [],
+            mark: 0,
           }
     setQuestions((prev) => [...prev, base])
   }
@@ -86,7 +115,9 @@ export default function ExamEditorPage() {
       prev.map((q) => {
         if (q.id !== id) return q
         const optionMarks = { ...(q.optionMarks || {}), [optionIndex]: mark }
-        return { ...q, optionMarks }
+        const correct = q.correctIndexes || []
+        const sum = correct.reduce((acc, idx) => acc + (optionMarks[idx] ?? 1), 0)
+        return { ...q, optionMarks, mark: sum }
       })
     )
 
@@ -104,15 +135,29 @@ export default function ExamEditorPage() {
           .filter((i) => i !== index)
           .map((i) => (i > index ? i - 1 : i))
 
+        const newOptionMarks: Record<number, number> = {}
+        const currentOptionMarks = q.optionMarks || {}
+        Object.keys(currentOptionMarks).forEach((keyStr) => {
+          const k = Number(keyStr)
+          if (k !== index) {
+            const newK = k > index ? k - 1 : k
+            newOptionMarks[newK] = currentOptionMarks[k]
+          }
+        })
+
+        const sum = correctIndexes.reduce((acc, idx) => acc + (newOptionMarks[idx] ?? 1), 0)
+
         return {
           ...q,
           options,
           correctIndexes,
+          optionMarks: newOptionMarks,
+          mark: sum,
         }
       })
     )
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setError('')
     for (const [i, q] of questions.entries()) {
       if (!q.prompt.trim()) {
@@ -126,10 +171,22 @@ export default function ExamEditorPage() {
         }
       }
     }
-    const updated = updateExamQuestions(code, questions)
-    if (updated) {
-      setExam(updated)
-      setSavedAt(Date.now())
+    try {
+      const updated = await updateExamQuestions(
+        code,
+        questions,
+        examTitle,
+        toSqlDateTime(startAt),
+        toSqlDateTime(endAt)
+      )
+      if (updated) {
+        setExam(updated)
+        setSavedAt(Date.now())
+      } else {
+        setError('Failed to update exam: Exam not found or update failed.')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error updating exam')
     }
   }
 
@@ -183,10 +240,18 @@ export default function ExamEditorPage() {
               </p>
             </div>
           </div>
-          <Button onClick={handleSave} className="gap-2">
-            <Save className="w-4 h-4" />
-            Save changes
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" asChild className="gap-2">
+              <Link href={`/exams/${encodeURIComponent(code)}/admin`}>
+                <LayoutDashboard className="w-4 h-4" />
+                Admin Dashboard
+              </Link>
+            </Button>
+            <Button onClick={handleSave} className="gap-2">
+              <Save className="w-4 h-4" />
+              Save changes
+            </Button>
+          </div>
         </div>
 
         {error && (
@@ -200,6 +265,57 @@ export default function ExamEditorPage() {
             Changes saved.
           </div>
         )}
+
+        <div className="rounded-lg border border-border p-4 space-y-4 mb-6">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="exam-title">Exam title</Label>
+              <Input
+                id="exam-title"
+                value={examTitle}
+                onChange={(e) => setExamTitle(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="exam-start">Start date & time</Label>
+              <Input
+                id="exam-start"
+                type="datetime-local"
+                value={startAt}
+                onChange={(e) => {
+                  const val = e.target.value
+                  setStartAt(val)
+                  if (val) {
+                    const newStartDate = new Date(val)
+                    if (!isNaN(newStartDate.getTime())) {
+                      const currentEndDate = endAt ? new Date(endAt) : null
+                      const needsUpdate =
+                        !endAt ||
+                        !endAtManuallyEdited ||
+                        (currentEndDate && newStartDate >= currentEndDate)
+                      if (needsUpdate) {
+                        const twoHoursLater = new Date(newStartDate.getTime() + 2 * 60 * 60 * 1000)
+                        setEndAt(formatDateTimeLocal(twoHoursLater))
+                      }
+                    }
+                  }
+                }}
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="exam-end">End date & time (optional)</Label>
+            <Input
+              id="exam-end"
+              type="datetime-local"
+              value={endAt}
+              onChange={(e) => {
+                setEndAt(e.target.value)
+                setEndAtManuallyEdited(true)
+              }}
+            />
+          </div>
+        </div>
 
         <div className="space-y-4">
           {questions.map((q, index) => (
@@ -240,12 +356,13 @@ export default function ExamEditorPage() {
                     <Input
                       id={`mark-${q.id}`}
                       type="number"
-                      min="1"
-                      step="1"
-                      value={q.mark ?? 1}
+                      value={q.mark ?? 0}
+                      readOnly={q.type === 'multiple_choice'}
+                      className={q.type === 'multiple_choice' ? 'bg-muted cursor-not-allowed' : ''}
                       onChange={(e) => {
+                        if (q.type === 'multiple_choice') return
                         const value = parseInt(e.target.value, 10)
-                        if (!isNaN(value) && value >= 1) {
+                        if (!isNaN(value) && value >= 0) {
                           updateQuestion(q.id, { mark: value })
                         }
                       }}
@@ -286,11 +403,26 @@ export default function ExamEditorPage() {
                             checked={(q.correctIndexes || []).includes(i)}
                             onChange={(e) => {
                               const current = q.correctIndexes || []
+                              const nextCorrect = e.target.checked
+                                ? [...current, i]
+                                : current.filter((x) => x !== i)
+
+                              const optionMarks = { ...(q.optionMarks || {}) }
+                              if (e.target.checked) {
+                                optionMarks[i] = optionMarks[i] ?? 1
+                              } else {
+                                delete optionMarks[i]
+                              }
+
+                              const sum = nextCorrect.reduce(
+                                (acc, idx) => acc + (optionMarks[idx] ?? 1),
+                                0
+                              )
 
                               updateQuestion(q.id, {
-                                correctIndexes: e.target.checked
-                                  ? [...current, i]
-                                  : current.filter((x) => x !== i),
+                                correctIndexes: nextCorrect,
+                                optionMarks,
+                                mark: sum,
                               })
                             }}
                           />

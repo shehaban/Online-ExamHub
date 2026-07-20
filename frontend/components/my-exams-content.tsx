@@ -25,9 +25,16 @@ import {
   Trash2,
   FileQuestion,
   CalendarDays,
+  LayoutDashboard,
 } from 'lucide-react'
 
-export default function ExamsPage({ showLogo = true }: { showLogo?: boolean } = {}) {
+export default function ExamsPage({
+  showLogo = true,
+  showHeader = true,
+}: {
+  showLogo?: boolean
+  showHeader?: boolean
+} = {}) {
   const { user, isLoading: authLoading } = useAuth()
   const router = useRouter()
 
@@ -35,29 +42,32 @@ export default function ExamsPage({ showLogo = true }: { showLogo?: boolean } = 
   const [loaded, setLoaded] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<Exam | null>(null)
 
-  const refresh = () => {
-    const all = getAllExams()
-    console.log('Current user number:', user?.number)
+  const refresh = async () => {
+    try {
+      const all = await getAllExams()
+      console.log('Current user number:', user?.number)
 
-    console.log(
-      all.map((exam) => ({
-        code: exam.code,
-        createdBy: exam.createdBy,
-        currentUser: user?.number,
-        match: String(exam.createdBy) === String(user?.number),
-      }))
-    )
-    if (user?.role === 'instructor') {
-      setExams(all.filter((exam) => exam.createdBy === String(user?.number)))
-    } else {
-      setExams(all)
+      console.log(
+        all.map((exam) => ({
+          code: exam.code,
+          createdBy: exam.createdBy,
+          currentUser: user?.number,
+          match: String(exam.createdBy) === String(user?.number),
+        }))
+      )
+      if (user?.role === 'instructor') {
+        setExams(all.filter((exam) => exam.createdBy === String(user?.number)))
+      } else {
+        setExams(all)
+      }
+    } catch (err) {
+      console.error('Failed to load exams:', err)
     }
   }
 
   useEffect(() => {
     if (!authLoading && user) {
-      refresh()
-      setLoaded(true)
+      refresh().finally(() => setLoaded(true))
     }
   }, [user, authLoading])
 
@@ -68,11 +78,15 @@ export default function ExamsPage({ showLogo = true }: { showLogo?: boolean } = 
     }
   }, [user, authLoading, router])
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!pendingDelete) return
-    deleteExam(pendingDelete.code)
-    setPendingDelete(null)
-    refresh()
+    try {
+      await deleteExam(pendingDelete.code)
+      setPendingDelete(null)
+      await refresh()
+    } catch (err) {
+      console.error('Failed to delete exam:', err)
+    }
   }
 
   const formatDate = (iso: string) =>
@@ -91,7 +105,7 @@ export default function ExamsPage({ showLogo = true }: { showLogo?: boolean } = 
   if (authLoading || !user) {
     return (
       <div className="min-h-screen bg-background">
-        <Header showLogo={showLogo} />
+        {showHeader && <Header showLogo={showLogo} />}
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
@@ -101,7 +115,7 @@ export default function ExamsPage({ showLogo = true }: { showLogo?: boolean } = 
 
   return (
     <div className="min-h-screen bg-background">
-      <Header showLogo={showLogo} />
+      {showHeader && <Header showLogo={showLogo} />}
       <main className="container mx-auto px-4 py-10 max-w-4xl">
         <div className="flex items-center gap-3 mb-8">
           <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
@@ -134,19 +148,38 @@ export default function ExamsPage({ showLogo = true }: { showLogo?: boolean } = 
                   <CardHeader>
                     <div className="flex items-start justify-between gap-4">
                       <div className="space-y-1">
-                        <CardTitle className="text-lg font-mono tracking-wide">
-                          {exam.code}
+                        <CardTitle className="text-lg font-bold text-foreground">
+                          {exam.title || 'Untitled Exam'}
                         </CardTitle>
-                        <CardDescription className="flex items-center gap-1.5">
-                          <CalendarDays className="w-3.5 h-3.5" />
-                          Published {formatDate(exam.createdAt)}
+                        <div className="text-xs font-mono text-primary font-semibold">
+                          Code: {exam.code}
+                        </div>
+                        <CardDescription className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground mt-1">
+                          <span className="flex items-center gap-1.5">
+                            <CalendarDays className="w-3.5 h-3.5" />
+                            Published {exam.createdAt ? formatDate(exam.createdAt) : ''}
+                          </span>
+                          {exam.createdBy && (
+                            <span className="flex items-center gap-1">
+                              Created by:{' '}
+                              <span className="font-semibold text-foreground">
+                                {exam.createdBy}
+                              </span>
+                            </span>
+                          )}
                         </CardDescription>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
+                        <Button variant="default" size="sm" asChild>
+                          <Link href={`/exams/${encodeURIComponent(exam.code)}/admin`}>
+                            <LayoutDashboard className="w-4 h-4 mr-2" />
+                            Admin Panel
+                          </Link>
+                        </Button>
                         <Button variant="outline" size="sm" asChild>
                           <Link href={`/exams/${encodeURIComponent(exam.code)}`}>
                             <Pencil className="w-4 h-4 mr-2" />
-                            Manage
+                            Edit
                           </Link>
                         </Button>
                         <Button

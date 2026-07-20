@@ -16,4 +16,18 @@ router.post('/forgot-password', userController.forgotPassword)
 
 router.post('/reset-password', userController.resetPassword)
 
+router.get('/public-stats', userController.getPublicStats)
+
+router.patch('/profile', verifyToken, userController.updateProfile)
+
+router.get('/dashboard', verifyToken, userController.getDashboardStats)
+
+router.get('/settings', verifyToken, userController.getSystemSettings)
+router.patch(
+  '/settings',
+  verifyToken,
+  allowedTo(userRoles.ADMIN),
+  userController.updateSystemSettings
+)
+
 export default router
