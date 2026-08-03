@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
   user_number  VARCHAR(50)    NOT NULL UNIQUE,
   name         VARCHAR(100)   NOT NULL,
   password     VARCHAR(255)   NOT NULL,
-  rule         ENUM('STUDENT', 'TEACHER') NOT NULL,
+  rule         ENUM('STUDENT', 'TEACHER', 'INSTRUCTOR') NOT NULL DEFAULT 'STUDENT',
   email        VARCHAR(255)   NULL DEFAULT NULL,
   avatar       VARCHAR(255)   NULL DEFAULT NULL,
   created_at   TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -153,3 +153,46 @@ CREATE TABLE IF NOT EXISTS exam_settings (
     is_locked TINYINT(1) DEFAULT 0,
     FOREIGN KEY (exam_code) REFERENCES exams(code) ON DELETE CASCADE
 );
+
+-- 11. AI EXAMS TABLE (Saved AI Drafts)
+CREATE TABLE IF NOT EXISTS ai_exams (
+    ai_exam_id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    source_text LONGTEXT NULL,
+    file_name VARCHAR(255) NULL,
+    questions JSON NOT NULL,
+    created_by VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_ai_exams_creator (created_by)
+);
+
+-- 12. AI GENERATION JOBS TABLE (Background Progress & Cross-page State)
+CREATE TABLE IF NOT EXISTS ai_generation_jobs (
+    job_id VARCHAR(50) PRIMARY KEY,
+    user_id VARCHAR(50) NOT NULL,
+    type ENUM('generate', 'refine') DEFAULT 'generate',
+    status ENUM('pending', 'generating', 'completed', 'failed') DEFAULT 'pending',
+    progress INT DEFAULT 0,
+    title VARCHAR(255) DEFAULT '',
+    questions JSON NULL,
+    error TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_ai_jobs_user (user_id)
+);
+
+-- 13. SYSTEM SETTINGS TABLE
+CREATE TABLE IF NOT EXISTS system_settings (
+    setting_key VARCHAR(255) PRIMARY KEY,
+    setting_value VARCHAR(255) NOT NULL
+);
+
+INSERT IGNORE INTO system_settings (setting_key, setting_value) VALUES 
+('maintenance_mode', 'false'),
+('allow_signup', 'true'),
+('min_pass_score', '50'),
+('system_name', 'Online ExamHub'),
+('teacher_code', 'INSTRUCTOR2024');
+
+

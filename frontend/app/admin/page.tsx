@@ -49,9 +49,11 @@ import {
   ExternalLink,
   PlusCircle,
   RefreshCw,
+  BarChart3,
 } from 'lucide-react'
+import { AdminDashboardCharts } from '@/components/admin-dashboard-charts'
 
-type TabType = 'overview' | 'users' | 'admins' | 'exams'
+type TabType = 'overview' | 'analytics' | 'users' | 'admins' | 'exams'
 type DialogMode = 'preview' | 'edit' | 'delete' | 'create' | 'delete_exam' | null
 
 interface ApiUser {
@@ -73,6 +75,7 @@ export default function AdminPage() {
   const [allUsers, setAllUsers] = useState<ApiUser[]>([])
   const [allAdmins, setAllAdmins] = useState<ApiUser[]>([])
   const [allExams, setAllExams] = useState<Exam[]>([])
+  const [dashboardData, setDashboardData] = useState<any>(null)
   const [isDataLoading, setIsDataLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -92,23 +95,27 @@ export default function AdminPage() {
   const [createNumber, setCreateNumber] = useState('')
   const [createPassword, setCreatePassword] = useState('')
 
-  // Fetch all users, admins, and exams
+  // Fetch all users, admins, exams, and dashboard analytics
   const loadData = useCallback(async () => {
     setIsDataLoading(true)
     setError('')
     try {
-      const [usersResponse, adminsResponse, examsData] = await Promise.all([
+      const [usersResponse, adminsResponse, examsData, dashRes] = await Promise.all([
         apiRequest('/users').catch(() => ({ data: { users: [] } })),
         apiRequest('/admin').catch(() => ({ data: { admins: [] } })),
         getAllExams().catch(() => []),
+        apiRequest('/users/dashboard').catch(() => ({ data: null })),
       ])
 
-      const fetchedUsers = usersResponse.data.users || []
-      const fetchedAdmins = adminsResponse.data.admins || []
+      const fetchedUsers = usersResponse.data?.users || []
+      const fetchedAdmins = adminsResponse.data?.admins || []
 
       setAllUsers(fetchedUsers)
       setAllAdmins(fetchedAdmins)
       setAllExams(examsData)
+      if (dashRes?.data) {
+        setDashboardData(dashRes.data)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load dashboard data')
     } finally {
@@ -347,6 +354,7 @@ export default function AdminPage() {
 
   const tabs = [
     { id: 'overview' as TabType, label: 'Overview', icon: LayoutDashboard },
+    { id: 'analytics' as TabType, label: 'Analytics & Charts', icon: BarChart3 },
     { id: 'users' as TabType, label: 'Users', icon: Users, count: allUsers.length },
     { id: 'admins' as TabType, label: 'Admins', icon: ShieldCheck, count: allAdmins.length },
     { id: 'exams' as TabType, label: 'Exams', icon: FileText, count: allExams.length },
@@ -624,11 +632,47 @@ export default function AdminPage() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Platform Analytics Charts (Parts for Fail/Success and User Roles) */}
+            <div className="pt-4 border-t border-border">
+              <AdminDashboardCharts
+                stats={{
+                  studentCount: totalStudentsCount,
+                  teacherCount: totalInstructorsCount,
+                  adminCount: totalAdminsCount,
+                  examCount: totalExamsCount,
+                  submissionCount: dashboardData?.stats?.submissionCount || 0,
+                  overallAvg: dashboardData?.stats?.overallAvg || 0,
+                  passedCount: dashboardData?.stats?.passedCount || 0,
+                  failedCount: dashboardData?.stats?.failedCount || 0,
+                }}
+                exams={dashboardData?.exams || []}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ─── ANALYTICS & CHARTS TAB ────────────────────────────────────────── */}
+        {activeTab === 'analytics' && (
+          <div className="space-y-6">
+            <AdminDashboardCharts
+              stats={{
+                studentCount: totalStudentsCount,
+                teacherCount: totalInstructorsCount,
+                adminCount: totalAdminsCount,
+                examCount: totalExamsCount,
+                submissionCount: dashboardData?.stats?.submissionCount || 0,
+                overallAvg: dashboardData?.stats?.overallAvg || 0,
+                passedCount: dashboardData?.stats?.passedCount || 0,
+                failedCount: dashboardData?.stats?.failedCount || 0,
+              }}
+              exams={dashboardData?.exams || []}
+            />
           </div>
         )}
 
         {/* ─── SEARCH & LIST FILTERS ────────────────────────────────────────── */}
-        {activeTab !== 'overview' && (
+        {activeTab !== 'overview' && activeTab !== 'analytics' && (
           <div className="space-y-6">
             <Card>
               <CardHeader className="pb-4">

@@ -304,3 +304,89 @@ export const updateSettings = asyncWrapper(async (req, res, next) => {
 
   res.json({ status: httpStatusText.SUCCESS, data: { settings: updated } })
 })
+
+// ─── ANTI-CHEATING CONTROLLERS ────────────────────────────────────────────────
+
+/**
+ * POST /api/exams/:code/cheating-alert
+ * Log student cheating warning or violation
+ */
+export const logCheatingAlert = asyncWrapper(async (req, res, next) => {
+  const { code } = req.params
+  const { id: userId, user_number: userNumber, name: userName } = req.currentUser
+  const { warningLevel, reason } = req.body
+
+  await examModel.logCheatingAlert(
+    code,
+    userId,
+    userNumber,
+    userName,
+    warningLevel || 1,
+    reason || 'Tab or application switch detected'
+  )
+
+  res.json({ status: httpStatusText.SUCCESS, message: 'Cheating warning logged' })
+})
+
+/**
+ * GET /api/exams/:code/cheating-alerts
+ * Retrieve all cheating alert logs for an exam (instructor/admin only)
+ */
+export const getCheatingAlerts = asyncWrapper(async (req, res, next) => {
+  const { code } = req.params
+  const { user_number: userNumber, rule } = req.currentUser
+
+  const exam = await examModel.getExamByCode(code)
+  if (!exam) {
+    return next(new AppError('Exam not found', 404, httpStatusText.FAIL))
+  }
+
+  const isOwner = String(exam.created_by) === String(userNumber)
+  const isAdmin = normalizeRole(rule) === 'ADMIN'
+
+  if (!isOwner && !isAdmin) {
+    return next(
+      new AppError(
+        'Only the exam creator or an admin can view cheating alerts',
+        403,
+        httpStatusText.FAIL
+      )
+    )
+  }
+
+  const alerts = await examModel.getCheatingAlertsByExam(code)
+  res.json({ status: httpStatusText.SUCCESS, data: { alerts } })
+})
+
+/**
+ * DELETE /api/exams/:code/cheating-alerts/:userId
+ * Clear cheating alerts for a student and grant them a last chance (instructor/admin only)
+ */
+export const clearCheatingAlerts = asyncWrapper(async (req, res, next) => {
+  const { code, userId } = req.params
+  const { user_number: userNumber, rule } = req.currentUser
+
+  const exam = await examModel.getExamByCode(code)
+  if (!exam) {
+    return next(new AppError('Exam not found', 404, httpStatusText.FAIL))
+  }
+
+  const isOwner = String(exam.created_by) === String(userNumber)
+  const isAdmin = normalizeRole(rule) === 'ADMIN'
+
+  if (!isOwner && !isAdmin) {
+    return next(
+      new AppError(
+        'Only the exam creator or an admin can clear cheating alerts',
+        403,
+        httpStatusText.FAIL
+      )
+    )
+  }
+
+  await examModel.clearCheatingAlertsForUser(code, userId)
+  res.json({
+    status: httpStatusText.SUCCESS,
+    message: 'Cheating alerts cleared and last chance granted',
+  })
+})

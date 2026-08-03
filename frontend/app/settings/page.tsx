@@ -74,6 +74,7 @@ export default function SettingsPage() {
 
   // Admin: System Config States
   const [systemName, setSystemName] = useState('Online ExamHub')
+  const [teacherCode, setTeacherCode] = useState('INSTRUCTOR2024')
   const [maintenanceMode, setMaintenanceMode] = useState(false)
   const [allowSignup, setAllowSignup] = useState(true)
   const [minPassScore, setMinPassScore] = useState(50)
@@ -117,6 +118,7 @@ export default function SettingsPage() {
       if (res.data?.settings) {
         const s = res.data.settings
         setSystemName(s.system_name || 'Online ExamHub')
+        setTeacherCode(s.teacher_code || 'INSTRUCTOR2024')
         setMaintenanceMode(s.maintenance_mode === 'true')
         setAllowSignup(s.allow_signup === 'true')
         setMinPassScore(Number(s.min_pass_score) || 50)
@@ -197,6 +199,7 @@ export default function SettingsPage() {
         method: 'PATCH',
         body: JSON.stringify({
           system_name: systemName,
+          teacher_code: teacherCode,
           maintenance_mode: String(maintenanceMode),
           allow_signup: String(allowSignup),
           min_pass_score: String(minPassScore),
@@ -596,6 +599,16 @@ export default function SettingsPage() {
                         />
                       </div>
                       <div className="space-y-1.5">
+                        <Label htmlFor="teacher-code">Teacher / Instructor Registration Code</Label>
+                        <Input
+                          id="teacher-code"
+                          value={teacherCode}
+                          onChange={(e) => setTeacherCode(e.target.value)}
+                          placeholder="e.g. INSTRUCTOR2024"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-1.5 sm:col-span-2">
                         <Label htmlFor="min-score">Default Min Passing Score (%)</Label>
                         <Input
                           id="min-score"

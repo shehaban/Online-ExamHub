@@ -35,6 +35,13 @@ db.getConnection()
       }
     }
     try {
+      await connection.query(
+        "ALTER TABLE users MODIFY COLUMN rule ENUM('STUDENT', 'TEACHER', 'INSTRUCTOR') NOT NULL DEFAULT 'STUDENT'"
+      )
+    } catch (e) {
+      console.error('Error updating users rule column ENUM:', e.message)
+    }
+    try {
       await connection.query('ALTER TABLE admins ADD COLUMN email VARCHAR(255) NULL')
     } catch (e) {
       if (e.code !== 'ER_DUP_FIELDNAME' && e.errno !== 1060) {
@@ -61,7 +68,8 @@ db.getConnection()
         ('maintenance_mode', 'false'),
         ('allow_signup', 'true'),
         ('min_pass_score', '50'),
-        ('system_name', 'Online ExamHub')
+        ('system_name', 'Online ExamHub'),
+        ('teacher_code', 'INSTRUCTOR2024')
       `)
     } catch (e) {
       console.error('Error ensuring system_settings table:', e.message)

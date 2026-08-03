@@ -21,6 +21,16 @@ export const getUserByEmail = async (email) => {
   return rows[0] || null
 }
 
+export const getUserByIdentifier = async (identifier) => {
+  if (!identifier) return null
+  const clean = String(identifier).trim()
+  const [rows] = await db.query(
+    'SELECT * FROM users WHERE user_number = ? OR email = ? OR name = ? LIMIT 1',
+    [clean, clean, clean]
+  )
+  return rows[0] || null
+}
+
 export const searchUsersByNamePartial = async (query) => {
   const [rows] = await db.query('SELECT * FROM users WHERE name LIKE ?', [`%${query}%`])
   return rows
@@ -78,9 +88,13 @@ export const updateUserProfileByNumber = async (userNumber, { name, email, avata
 export const createUser = async (user) => {
   const { user_number, name, password, rule, email } = user
   await ensureProfileColumns()
+  const normalizedRule = String(rule || 'STUDENT').toUpperCase()
+  const finalRule = ['STUDENT', 'TEACHER', 'INSTRUCTOR'].includes(normalizedRule)
+    ? normalizedRule
+    : 'STUDENT'
   const [result] = await db.query(
     'INSERT INTO users (user_number, name, password, rule, email) VALUES (?, ?, ?, ?, ?)',
-    [user_number, name, password, rule, email]
+    [user_number, name, password, finalRule, email]
   )
-  return { id: result.insertId, ...user }
+  return { id: result.insertId, ...user, rule: finalRule }
 }

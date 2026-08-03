@@ -5,12 +5,14 @@ import {
   getUsersByName,
   getUserByNumber,
   getUserByEmail,
+  getUserByIdentifier,
   searchUsersByNamePartial,
   updateUserProfileByNumber,
 } from '../models/userModel.js'
 import {
   getAdminByName,
   getAdminByNumber,
+  getAdminByIdentifier,
   searchAdminsByNamePartial,
   updateAdminProfileByNumber,
 } from '../models/adminModel.js'
@@ -41,14 +43,28 @@ export const fetchUserByName = asyncWrapper(async (req, res, next) => {
 })
 
 export const register = asyncWrapper(async (req, res, next) => {
-  const { user_number, name, password, rule, email } = req.body // added email here
+  const { user_number, name, password, rule, email, instructorCode, teacherCode } = req.body
+  const normalizedRule = String(rule || 'STUDENT').toUpperCase()
+
+  // Validate teacher/instructor access code against DB setting if registering as teacher
+  if (normalizedRule === 'INSTRUCTOR' || normalizedRule === 'TEACHER') {
+    const inputCode = String(instructorCode || teacherCode || '').trim()
+    const [rows] = await db.query(
+      "SELECT setting_value FROM system_settings WHERE setting_key = 'teacher_code'"
+    )
+    const validCode = rows[0]?.setting_value || 'INSTRUCTOR2024'
+
+    if (inputCode !== validCode) {
+      return next(new AppError('Invalid instructor access code', 400, httpStatusText.FAIL))
+    }
+  }
+
   const oldUser = await getUserByNumber(user_number)
   if (oldUser) {
     const error = new AppError('this user already exists', 400, httpStatusText.FAIL)
     return next(error)
   }
 
-  // added check for existing email to prevent duplicate registrations with the same email address
   const existingEmail = await getUserByEmail(email)
   if (existingEmail) {
     return next(new AppError('This email is already registered', 400, httpStatusText.ERROR))
@@ -59,8 +75,8 @@ export const register = asyncWrapper(async (req, res, next) => {
     user_number,
     name,
     password: hashedPassword,
-    rule: rule || 'STUDENT',
-    email, // added email here
+    rule: normalizedRule,
+    email,
   })
 
   const token = await generateJWT({
@@ -75,10 +91,12 @@ export const register = asyncWrapper(async (req, res, next) => {
 })
 
 export const login = asyncWrapper(async (req, res, next) => {
-  const { user_number, name, password } = req.body
-  if (!password || (!user_number && !name)) {
+  const { user_number, name, email, identifier, password } = req.body
+  const rawId = (user_number || identifier || name || email || '').trim()
+
+  if (!password || !rawId) {
     const error = new AppError(
-      'Password and either user_number or name should be valid!',
+      'Password and user number / email / name are required',
       400,
       httpStatusText.ERROR
     )
@@ -88,33 +106,22 @@ export const login = asyncWrapper(async (req, res, next) => {
   let user = null
   let role = null
 
-  // 1. Check if it's an admin
-  if (name || user_number) {
-    const admin = name ? await getAdminByName(name) : await getAdminByNumber(user_number)
-    if (admin) {
-      const matchedPassword = await bcrypt.compare(password, admin.password)
-      if (matchedPassword) {
-        user = admin
-        role = admin.rule || 'ADMIN'
-      }
+  // 1. Check if it's an admin first
+  const admin = await getAdminByIdentifier(rawId)
+  if (admin) {
+    const matchedPassword = await bcrypt.compare(password, admin.password)
+    if (matchedPassword) {
+      user = admin
+      role = admin.rule || 'ADMIN'
     }
   }
 
-  // 2. If not an admin, check if it's a student or teacher (search by user_number)
-  if (!user && user_number) {
-    const dbUser = await getUserByNumber(user_number)
+  // 2. If not an admin, check if it's a student or teacher (lookup by number, email, or name)
+  if (!user) {
+    const dbUser = await getUserByIdentifier(rawId)
     if (dbUser) {
       const matchedPassword = await bcrypt.compare(password, dbUser.password)
       if (matchedPassword) {
-        // If name is also provided, verify it matches (optional but safer)
-        if (name && dbUser.name !== name) {
-          const error = new AppError(
-            'Name does not match the user number',
-            401,
-            httpStatusText.ERROR
-          )
-          return next(error)
-        }
         user = dbUser
         role = dbUser.rule // STUDENT or TEACHER
       }
@@ -143,7 +150,11 @@ export const login = asyncWrapper(async (req, res, next) => {
       },
     })
   } else {
-    const error = new AppError('Incorrect credentials', 401, httpStatusText.ERROR)
+    const error = new AppError(
+      'Incorrect user number/email/name or password',
+      401,
+      httpStatusText.ERROR
+    )
     return next(error)
   }
 })
@@ -407,6 +418,8 @@ export const getDashboardStats = asyncWrapper(async (req, res, next) => {
     const examsWithStats = exams.map((exam) => {
       const examSubs = submissions.filter((s) => s.exam_code === exam.code)
       const count = examSubs.length
+      const passed = examSubs.filter((s) => s.total > 0 && s.score / s.total >= 0.5).length
+      const failed = examSubs.filter((s) => s.total > 0 && s.score / s.total < 0.5).length
       const avg =
         count > 0
           ? examSubs.reduce((acc, curr) => acc + (curr.score / curr.total) * 100, 0) / count
@@ -416,6 +429,8 @@ export const getDashboardStats = asyncWrapper(async (req, res, next) => {
       return {
         ...exam,
         participant_count: count,
+        passed_count: passed,
+        failed_count: failed,
         avg_score: Math.round(avg * 10) / 10,
         max_score: Math.round(max * 10) / 10,
       }
@@ -476,6 +491,33 @@ export const getDashboardStats = asyncWrapper(async (req, res, next) => {
        ORDER BY created_at DESC`
     )
 
+    const [examsRaw] = await db.query(
+      `SELECT e.exam_id, e.code, e.title, e.created_by, e.created_at,
+              (SELECT COUNT(DISTINCT user_id) FROM exam_submissions WHERE exam_code = e.code) as participant_count,
+              (SELECT COUNT(DISTINCT user_id) FROM exam_submissions WHERE exam_code = e.code AND finished_at IS NOT NULL AND total > 0 AND (score / total) >= 0.5) as passed_count,
+              (SELECT COUNT(DISTINCT user_id) FROM exam_submissions WHERE exam_code = e.code AND finished_at IS NOT NULL AND total > 0 AND (score / total) < 0.5) as failed_count,
+              (SELECT AVG(score / total * 100) FROM exam_submissions WHERE exam_code = e.code AND finished_at IS NOT NULL) as avg_score,
+              (SELECT MAX(score / total * 100) FROM exam_submissions WHERE exam_code = e.code AND finished_at IS NOT NULL) as max_score
+       FROM exams e
+       ORDER BY e.created_at DESC`
+    )
+
+    const examsList = examsRaw.map((e) => ({
+      ...e,
+      participant_count: Number(e.participant_count) || 0,
+      passed_count: Number(e.passed_count) || 0,
+      failed_count: Number(e.failed_count) || 0,
+      avg_score: e.avg_score ? Math.round(e.avg_score * 10) / 10 : 0,
+      max_score: e.max_score ? Math.round(e.max_score * 10) / 10 : 0,
+    }))
+
+    const [[{ count: passedCount }]] = await db.query(
+      'SELECT COUNT(*) as count FROM exam_submissions WHERE finished_at IS NOT NULL AND total > 0 AND (score / total) >= 0.5'
+    )
+    const [[{ count: failedCount }]] = await db.query(
+      'SELECT COUNT(*) as count FROM exam_submissions WHERE finished_at IS NOT NULL AND total > 0 AND (score / total) < 0.5'
+    )
+
     return res.status(200).json({
       status: httpStatusText.SUCCESS,
       data: {
@@ -488,9 +530,12 @@ export const getDashboardStats = asyncWrapper(async (req, res, next) => {
           roomCount,
           submissionCount,
           overallAvg: overallAvg ? Math.round(overallAvg * 10) / 10 : 0,
+          passedCount: passedCount || 0,
+          failedCount: failedCount || 0,
         },
         recentSubmissions,
         users: usersList,
+        exams: examsList,
       },
     })
   }
@@ -544,5 +589,24 @@ export const updateSystemSettings = asyncWrapper(async (req, res, next) => {
   res.status(200).json({
     status: httpStatusText.SUCCESS,
     message: 'System settings updated successfully',
+  })
+})
+
+export const getPublicSettings = asyncWrapper(async (req, res, next) => {
+  const [rows] = await db.query(
+    "SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN ('teacher_code', 'allow_signup', 'system_name', 'maintenance_mode')"
+  )
+  const settings = {
+    teacher_code: 'INSTRUCTOR2024',
+    allow_signup: 'true',
+    system_name: 'Online ExamHub',
+    maintenance_mode: 'false',
+  }
+  rows.forEach((r) => {
+    settings[r.setting_key] = r.setting_value
+  })
+  res.status(200).json({
+    status: httpStatusText.SUCCESS,
+    data: { settings },
   })
 })

@@ -19,6 +19,17 @@ export interface ExamSettings {
   is_locked: number // 0 or 1
 }
 
+export interface CheatingAlert {
+  id: number
+  exam_code: string
+  user_id: number
+  user_number: string
+  user_name: string
+  warning_level: number
+  reason: string
+  created_at: string
+}
+
 /** Record that the current user joined/entered an exam */
 export async function joinExam(code: string): Promise<void> {
   await apiRequest(`/exams/${encodeURIComponent(code)}/join`, { method: 'POST' })
@@ -75,4 +86,33 @@ export async function updateExamSettings(
     body: JSON.stringify(settings),
   })
   return res.data.settings as ExamSettings
+}
+
+/** Log cheating alert warning/violation for student */
+export async function reportCheatingAlert(
+  code: string,
+  warningLevel: number,
+  reason?: string
+): Promise<void> {
+  await apiRequest(`/exams/${encodeURIComponent(code)}/cheating-alert`, {
+    method: 'POST',
+    body: JSON.stringify({ warningLevel, reason }),
+  })
+}
+
+/** Get all cheating alerts for exam (instructor only) */
+export async function getCheatingAlerts(code: string): Promise<CheatingAlert[]> {
+  try {
+    const res = await apiRequest(`/exams/${encodeURIComponent(code)}/cheating-alerts`)
+    return res.data.alerts as CheatingAlert[]
+  } catch (err) {
+    return []
+  }
+}
+
+/** Clear/Forgive cheating alerts for a student (instructor/admin only - gives last chance) */
+export async function forgiveCheatingAlerts(code: string, userId: string | number): Promise<void> {
+  await apiRequest(`/exams/${encodeURIComponent(code)}/cheating-alerts/${userId}`, {
+    method: 'DELETE',
+  })
 }

@@ -34,6 +34,7 @@ interface RegisterData {
   name: string
   role: 'student' | 'instructor' | 'admin'
   email: string // added email field here
+  instructorCode?: string
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -112,6 +113,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false)
     }
+
+    const handleAuthExpired = () => {
+      setUser(null)
+      localStorage.removeItem(TOKEN_KEY)
+      localStorage.removeItem(USER_INFO_KEY)
+      Cookies.remove(SESSION_KEY)
+      if (typeof window !== 'undefined') {
+        import('sonner').then(({ toast }) => {
+          toast.error('Your session has expired. Please sign in again.', {
+            duration: 5000,
+            id: 'auth-expired-toast',
+          })
+        })
+        if (!window.location.pathname.startsWith('/auth/login')) {
+          window.location.href = '/auth/login'
+        }
+      }
+    }
+
+    window.addEventListener('auth:expired', handleAuthExpired)
+    return () => window.removeEventListener('auth:expired', handleAuthExpired)
   }, [])
 
   /**
@@ -157,6 +179,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             password: data.password,
             rule: mapFrontendRole(data.role),
             email: data.email, // added email field here
+            instructorCode: data.instructorCode,
           }),
         })
 

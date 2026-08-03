@@ -7,6 +7,7 @@ import userRoutes from './routes/user.route.js'
 import adminRoutes from './routes/admin.route.js'
 import roomRoutes from './routes/room.route.js'
 import examRoutes from './routes/exam.route.js'
+import aiRoutes from './routes/ai.route.js'
 import httpStatusText from './utils/httpStatusText.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -30,6 +31,7 @@ app.use('/api/users', userRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/rooms', roomRoutes)
 app.use('/api/exams', examRoutes)
+app.use('/api/ai', aiRoutes)
 
 app.use((req, res) => {
   return res

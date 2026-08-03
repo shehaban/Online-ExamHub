@@ -27,7 +27,27 @@ export async function apiRequest(endpoint: string, options: RequestInit = {}) {
   }
 
   if (!response.ok) {
-    throw new Error(data?.message || data?.error || `HTTP ${response.status}`)
+    const rawMsg = data?.message || data?.error || ''
+
+    // Only treat as an expired/invalid token if:
+    // 1. The user actually has an active token stored (i.e. they were previously logged in), AND
+    // 2. The error message specifically indicates a token problem (not wrong credentials)
+    const hasExistingToken = !!token
+    const isTokenMsg =
+      /expired token|token is required|jwt expired|invalid token|session has expired/i.test(rawMsg)
+    const isTokenErr = hasExistingToken && response.status === 401 && (isTokenMsg || rawMsg === '')
+
+    if (isTokenErr) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('exam_platform_token')
+        localStorage.removeItem('exam_platform_user_info')
+        document.cookie = 'exam_platform_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;'
+        window.dispatchEvent(new CustomEvent('auth:expired'))
+      }
+      throw new Error('Your session has expired. Please sign in again.')
+    }
+
+    throw new Error(rawMsg || `HTTP ${response.status}`)
   }
 
   return data
