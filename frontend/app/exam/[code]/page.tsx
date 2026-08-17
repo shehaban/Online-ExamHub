@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useEffect, useState } from 'react'
+import { use, useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { getExam, type Exam } from '@/lib/exam-store'
 import { getExamEntryState } from '@/lib/exam-entry-state'
@@ -14,8 +14,12 @@ import {
   submitExamResult,
   getExamSettings,
   getMySubmission,
+  reportCheatingAlert,
+  getCheatingAlerts,
   type ExamSettings,
+  type CheatingAlert,
 } from '@/lib/exam-submissions'
+import { toast } from 'sonner'
 import { useAuth } from '@/lib/auth-context'
 import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
@@ -23,6 +27,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   ArrowLeft,
   CheckCircle2,
@@ -38,6 +50,11 @@ import {
   BarChart3,
   Eye,
   Home,
+  ShieldAlert,
+  ShieldX,
+  AlertTriangle,
+  Ban,
+  RefreshCw,
 } from 'lucide-react'
 import { ExamPerformanceChart } from '@/components/exam-performance-chart'
 import { ExamResultView } from '@/components/exam-result-view'
@@ -51,6 +68,7 @@ export default function TakeExamPage({ params }: { params: Promise<{ code: strin
   const [loaded, setLoaded] = useState(false)
   const [answers, setAnswers] = useState<Record<string, string[]>>({})
   const [submitted, setSubmitted] = useState(false)
+  const [pastScore, setPastScore] = useState<{ score: number; total: number } | null>(null)
   const [viewMode, setViewMode] = useState<'exam' | 'result' | 'review'>('exam')
   const [examStarted, setExamStarted] = useState(true)
   const [examHasEnded, setExamHasEnded] = useState(false)
@@ -60,7 +78,17 @@ export default function TakeExamPage({ params }: { params: Promise<{ code: strin
   const [joinError, setJoinError] = useState<string | null>(null)
   const [isJoining, setIsJoining] = useState(false)
   const [kickedOut, setKickedOut] = useState(false)
-  const [pastScore, setPastScore] = useState<{ score: number; total: number } | null>(null)
+  const [warnings, setWarnings] = useState(0)
+  const warningsRef = useRef<number>(0)
+  const lastWarningTimeRef = useRef<number>(0)
+  const isDisqualifiedRef = useRef<boolean>(false)
+  const disqualifySubmittedRef = useRef<boolean>(false)
+  const [cheatNoticeModal, setCheatNoticeModal] = useState<{
+    open: boolean
+    type: 'warning' | 'banned'
+    title: string
+    message: string
+  } | null>(null)
 
   useEffect(() => {
     async function loadExam() {
@@ -79,6 +107,10 @@ export default function TakeExamPage({ params }: { params: Promise<{ code: strin
               setSubmitted(true)
               setViewMode('result')
               setHasEnteredExam(true)
+              disqualifySubmittedRef.current = true
+              if (sub.score === 0) {
+                isDisqualifiedRef.current = true
+              }
             }
           }
         }
@@ -106,23 +138,170 @@ export default function TakeExamPage({ params }: { params: Promise<{ code: strin
     return () => window.clearInterval(timer)
   }, [exam?.startAt, exam?.endAt])
 
-  // Polling to detect if kicked out
+  // Polling to monitor participant status & live last-chance reinstatements from instructor
   useEffect(() => {
-    if (!hasEnteredExam || submitted || !exam || !user) return
+    if (!exam || !user) return
 
     const checkStatus = async () => {
       try {
         const sub = await getMySubmission(exam.code)
-        // If we entered but the backend has no record, we were kicked
-        if (!sub) {
-          setKickedOut(true)
+
+        // Case 1: If student was kicked out or submitted due to disqualification, BUT instructor granted last chance (reset finished_at to NULL)
+        const isDisqualifiedOrKicked =
+          kickedOut ||
+          isDisqualifiedRef.current ||
+          (submitted && pastScore !== null && pastScore.score === 0)
+
+        if (
+          isDisqualifiedOrKicked &&
+          disqualifySubmittedRef.current &&
+          sub &&
+          sub.finished_at === null
+        ) {
+          isDisqualifiedRef.current = false
+          disqualifySubmittedRef.current = false
+          setKickedOut(false)
+          setSubmitted(false)
+          setViewMode('exam')
+          setHasEnteredExam(true)
+          setPastScore(null)
+          warningsRef.current = 0
+          setWarnings(0)
+          setCheatNoticeModal(null)
+          toast.success(
+            '✨ Your instructor has granted you a last chance! You can now resume your exam.',
+            {
+              duration: 8000,
+            }
+          )
+          return
+        }
+
+        // Case 2: If student was stopped by instructor (submission marked finished)
+        if (
+          hasEnteredExam &&
+          !submitted &&
+          !isDisqualifiedRef.current &&
+          sub &&
+          sub.finished_at !== null
+        ) {
+          warningsRef.current = 2
+          setWarnings(2)
+          setSubmitted(true)
+          setViewMode('result')
+          setPastScore({ score: sub.score, total: sub.total })
+          disqualifySubmittedRef.current = true
         }
       } catch (e) {}
     }
 
-    const timer = setInterval(checkStatus, 5000)
+    const timer = setInterval(checkStatus, 3000)
     return () => clearInterval(timer)
-  }, [hasEnteredExam, submitted, exam, user])
+  }, [hasEnteredExam, submitted, kickedOut, exam, user, pastScore])
+
+  // Anti-cheat: tab switching & window blur detection with 3-second debounce
+  useEffect(() => {
+    if (!hasEnteredExam || submitted || !examStarted || examHasEnded) return
+
+    const triggerWarning = () => {
+      const now = Date.now()
+      // Cooldown of 3 seconds to eliminate double triggers caused by focus changes or dual events
+      if (now - lastWarningTimeRef.current < 3000) return
+      lastWarningTimeRef.current = now
+
+      const nextCount = warningsRef.current + 1
+      warningsRef.current = nextCount
+      setWarnings(nextCount)
+
+      if (nextCount === 1) {
+        toast.warning('⚠️ Anti-Cheat Warning: Tab/App Switch Detected!', {
+          description:
+            'Warning #1: You switched tabs or opened another application. Doing this once more will stop your exam with a score of 0.',
+          duration: 8000,
+        })
+        setCheatNoticeModal({
+          open: true,
+          type: 'warning',
+          title: 'Anti-Cheat Warning: Tab/App Switch Detected',
+          message:
+            'Warning #1: You switched tabs or opened another application. Doing this once more will stop your exam with a score of 0.',
+        })
+        if (exam?.code) {
+          reportCheatingAlert(exam.code, 1, 'Tab or application switch detected (Warning 1)').catch(
+            () => {}
+          )
+        }
+      } else if (nextCount >= 2) {
+        toast.error('🛑 Disqualified: Exam Stopped!', {
+          description:
+            'You switched tabs again. Your exam is stopped with a score of 0. Your teacher can grant you a last chance.',
+          duration: 10000,
+        })
+        setCheatNoticeModal({
+          open: true,
+          type: 'banned',
+          title: 'Disqualified: Exam Stopped',
+          message:
+            'You switched tabs/applications again. Your exam has been stopped and your score is now 0. If your teacher grants you a last chance, your exam will resume automatically.',
+        })
+        if (exam?.code) {
+          reportCheatingAlert(exam.code, 2, 'Repeated tab switch (Exam stopped - Score 0)').catch(
+            () => {}
+          )
+        }
+        // Submit with 0 score immediately
+        handleDisqualify()
+      }
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.hidden || document.visibilityState === 'hidden') {
+        triggerWarning()
+      }
+    }
+
+    const handleWindowBlur = () => {
+      triggerWarning()
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('blur', handleWindowBlur)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('blur', handleWindowBlur)
+    }
+  }, [hasEnteredExam, submitted, examStarted, examHasEnded, exam?.code])
+
+  // Prevent browser back navigation & tab close/refresh while exam is active
+  useEffect(() => {
+    if (!hasEnteredExam || submitted || !examStarted || examHasEnded) return
+
+    // 1. Prevent tab close / refresh
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = 'An exam is currently in progress. If you leave, your progress may be lost.'
+      return e.returnValue
+    }
+
+    // 2. Prevent browser back button navigation
+    window.history.pushState(null, '', window.location.href)
+    const handlePopState = () => {
+      window.history.pushState(null, '', window.location.href)
+      toast.warning('⚠️ Navigation Locked', {
+        description:
+          'You cannot go back or leave while taking an exam! Submit your exam to finish.',
+      })
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [hasEnteredExam, submitted, examStarted, examHasEnded])
 
   const formatTimeLeft = (ms: number) => {
     const totalSeconds = Math.max(0, Math.floor(ms / 1000))
@@ -204,7 +383,27 @@ export default function TakeExamPage({ params }: { params: Promise<{ code: strin
     setHasEnteredExam(true)
   }
 
+  const handleDisqualify = async () => {
+    isDisqualifiedRef.current = true
+    disqualifySubmittedRef.current = false
+    setSubmitted(true)
+    setViewMode('result')
+    setPastScore({ score: 0, total })
+    if (user && exam) {
+      try {
+        await submitExamResult(exam.code, 0, total, answers)
+        disqualifySubmittedRef.current = true
+      } catch (err) {
+        console.error('Failed to record disqualification:', err)
+        disqualifySubmittedRef.current = true
+      }
+    } else {
+      disqualifySubmittedRef.current = true
+    }
+  }
+
   const handleSubmit = async () => {
+    setCheatNoticeModal(null)
     setSubmitted(true)
     setViewMode('result')
     if (user && exam) {
@@ -259,13 +458,44 @@ export default function TakeExamPage({ params }: { params: Promise<{ code: strin
               <div>
                 <h1 className="text-lg font-semibold text-foreground">You were removed</h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                  The instructor has removed you from this exam. Your progress has been discarded.
+                  The instructor removed you from this exam. If your instructor grants you a last
+                  chance, your exam will resume automatically.
                 </p>
               </div>
-              <Button variant="outline" className="gap-2" onClick={() => router.push('/')}>
-                <ArrowLeft className="w-4 h-4" />
-                Back to home
-              </Button>
+              <div className="flex items-center gap-2 flex-wrap justify-center">
+                <Button
+                  variant="default"
+                  className="gap-2"
+                  onClick={async () => {
+                    if (exam && user) {
+                      const sub = await getMySubmission(exam.code).catch(() => null)
+                      if (sub && sub.finished_at === null) {
+                        isDisqualifiedRef.current = false
+                        disqualifySubmittedRef.current = false
+                        setKickedOut(false)
+                        setSubmitted(false)
+                        setViewMode('exam')
+                        setHasEnteredExam(true)
+                        setPastScore(null)
+                        warningsRef.current = 0
+                        setWarnings(0)
+                        toast.success(
+                          '✨ Your instructor has granted you a last chance! You can now resume your exam.'
+                        )
+                      } else {
+                        toast.info('You have not been reinstated by the instructor yet.')
+                      }
+                    }
+                  }}
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Check Status / Resume
+                </Button>
+                <Button variant="outline" className="gap-2" onClick={() => router.push('/')}>
+                  <ArrowLeft className="w-4 h-4" />
+                  Back to home
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </main>
@@ -303,18 +533,27 @@ export default function TakeExamPage({ params }: { params: Promise<{ code: strin
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      {(!hasEnteredExam || submitted) && <Header />}
       <main className="container mx-auto px-4 py-10 max-w-3xl">
         <div className="flex items-center justify-between gap-4 mb-8 flex-wrap">
           <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => router.push('/')}
-              aria-label="Back to home"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
+            {hasEnteredExam && !submitted ? (
+              <Badge
+                variant="outline"
+                className="gap-1.5 border-primary/40 text-primary bg-primary/5 text-xs font-semibold py-1.5 px-3"
+              >
+                <Lock className="w-3.5 h-3.5" /> Exam Active (Navigation Locked)
+              </Badge>
+            ) : (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => router.push('/')}
+                aria-label="Back to home"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+            )}
             <div>
               <h1 className="text-2xl font-bold text-foreground">{exam?.title || 'Exam'}</h1>
               <p className="text-sm text-muted-foreground">
@@ -657,6 +896,50 @@ export default function TakeExamPage({ params }: { params: Promise<{ code: strin
           </div>
         )}
       </main>
+
+      {/* Anti-Cheat Notice Modal */}
+      <Dialog open={!!cheatNoticeModal?.open} onOpenChange={() => setCheatNoticeModal(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              {cheatNoticeModal?.type === 'banned' ? (
+                <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center shrink-0">
+                  <ShieldX className="w-6 h-6 text-red-600 dark:text-red-400" />
+                </div>
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
+                  <ShieldAlert className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+                </div>
+              )}
+              <div>
+                <DialogTitle className="text-base font-bold text-foreground">
+                  {cheatNoticeModal?.title}
+                </DialogTitle>
+                <Badge
+                  variant={cheatNoticeModal?.type === 'banned' ? 'destructive' : 'outline'}
+                  className="mt-1 text-[11px]"
+                >
+                  {cheatNoticeModal?.type === 'banned'
+                    ? 'Disqualified — Score: 0'
+                    : 'Warning 1 / 2'}
+                </Badge>
+              </div>
+            </div>
+          </DialogHeader>
+          <DialogDescription className="text-sm text-foreground/80 mt-2">
+            {cheatNoticeModal?.message}
+          </DialogDescription>
+          <DialogFooter className="mt-4">
+            <Button
+              variant={cheatNoticeModal?.type === 'banned' ? 'destructive' : 'default'}
+              onClick={() => setCheatNoticeModal(null)}
+              className="w-full"
+            >
+              {cheatNoticeModal?.type === 'banned' ? 'I Understand' : 'Acknowledge & Continue Exam'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

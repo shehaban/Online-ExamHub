@@ -224,11 +224,39 @@ export const getSubmissionByUser = async (examCode, userId) => {
 
 export const kickParticipant = async (examCode, userId) => {
   await ensureExamSubmissionsTable()
+  const code = examCode.trim().toUpperCase()
+
+  // 1. Mark submission as finished with 0 score (disqualified)
   const [result] = await db.query(
-    'DELETE FROM exam_submissions WHERE exam_code = ? AND user_id = ?',
-    [examCode.trim().toUpperCase(), userId]
+    'UPDATE exam_submissions SET score = 0, finished_at = CURRENT_TIMESTAMP WHERE exam_code = ? AND user_id = ?',
+    [code, userId]
   )
-  return result.affectedRows > 0
+
+  if (result.affectedRows === 0) {
+    const [userRows] = await db.query('SELECT id, user_number, name FROM users WHERE id = ?', [
+      userId,
+    ])
+    if (userRows.length > 0) {
+      const u = userRows[0]
+      await db.query(
+        `INSERT INTO exam_submissions (exam_code, user_id, user_number, user_name, score, total, answers, finished_at)
+         VALUES (?, ?, ?, ?, 0, 100, '{}', CURRENT_TIMESTAMP)
+         ON DUPLICATE KEY UPDATE score = 0, finished_at = CURRENT_TIMESTAMP`,
+        [code, u.id, u.user_number || '', u.name || '']
+      )
+    }
+  }
+
+  // 2. Log Level 2 cheating alert (disqualified by instructor)
+  await logCheatingAlert(
+    code,
+    userId,
+    '',
+    '',
+    2,
+    'Instructor manually stopped exam (Disqualified - 0 score)'
+  )
+  return true
 }
 
 // ─── EXAM SETTINGS ───────────────────────────────────────────────────────────
@@ -250,4 +278,97 @@ export const updateExamSettings = async (examCode, { capacity, is_locked }) => {
     [code, capacity !== undefined ? capacity : null, is_locked !== undefined ? is_locked : 0]
   )
   return getExamSettings(examCode)
+}
+
+// ─── ANTI-CHEATING LOGS & ALERTS ──────────────────────────────────────────────
+
+const ensureCheatingLogsTable = async () => {
+  try {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS exam_cheating_logs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        exam_code VARCHAR(50) NOT NULL,
+        user_id INT NOT NULL,
+        user_number VARCHAR(50) NOT NULL,
+        user_name VARCHAR(100) NOT NULL,
+        warning_level INT NOT NULL,
+        reason VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_cheat_code (exam_code),
+        INDEX idx_cheat_user (user_id)
+      )
+    `)
+  } catch (error) {
+    // Ignore schema creation error if table exists
+  }
+}
+
+export const logCheatingAlert = async (
+  examCode,
+  userId,
+  userNumber,
+  userName,
+  warningLevel,
+  reason
+) => {
+  await ensureCheatingLogsTable()
+  const code = examCode.trim().toUpperCase()
+  await db.query(
+    'INSERT INTO exam_cheating_logs (exam_code, user_id, user_number, user_name, warning_level, reason) VALUES (?, ?, ?, ?, ?, ?)',
+    [
+      code,
+      userId,
+      userNumber || '',
+      userName || '',
+      warningLevel,
+      reason || 'Tab or application switch detected',
+    ]
+  )
+  return true
+}
+
+export const getCheatingAlertsByExam = async (examCode) => {
+  await ensureCheatingLogsTable()
+  const code = examCode.trim().toUpperCase()
+  const [rows] = await db.query(
+    'SELECT * FROM exam_cheating_logs WHERE exam_code = ? ORDER BY created_at DESC',
+    [code]
+  )
+  return rows
+}
+
+export const clearCheatingAlertsForUser = async (examCode, userId) => {
+  await ensureCheatingLogsTable()
+  await ensureExamSubmissionsTable()
+  const code = examCode.trim().toUpperCase()
+
+  // 1. Delete anti-cheat warning logs
+  await db.query('DELETE FROM exam_cheating_logs WHERE exam_code = ? AND user_id = ?', [
+    code,
+    userId,
+  ])
+
+  // 2. Un-finish/re-open student's submission (reset finished_at to NULL)
+  const [result] = await db.query(
+    'UPDATE exam_submissions SET finished_at = NULL WHERE exam_code = ? AND user_id = ?',
+    [code, userId]
+  )
+
+  // 3. If student was kicked (submission was deleted), recreate active submission so student can re-enter
+  if (result.affectedRows === 0) {
+    const [userRows] = await db.query('SELECT id, user_number, name FROM users WHERE id = ?', [
+      userId,
+    ])
+    if (userRows.length > 0) {
+      const u = userRows[0]
+      await db.query(
+        `INSERT INTO exam_submissions (exam_code, user_id, user_number, user_name, score, total, answers, finished_at)
+         VALUES (?, ?, ?, ?, 0, 0, '{}', NULL)
+         ON DUPLICATE KEY UPDATE finished_at = NULL`,
+        [code, u.id, u.user_number || '', u.name || '']
+      )
+    }
+  }
+
+  return true
 }

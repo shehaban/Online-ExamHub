@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth-context'
 import { useTheme } from '@/lib/theme-context'
+import { useAiJob } from '@/lib/ai-job-context'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -22,11 +23,14 @@ import {
   Moon,
   Sun,
   ShieldCheck,
+  Sparkles,
+  Loader2,
 } from 'lucide-react'
 
 export function Header({ showLogo = true }: { showLogo?: boolean } = {}) {
   const { user, logout } = useAuth()
   const { theme, toggleTheme } = useTheme()
+  const { activeJob } = useAiJob()
 
   const getInitials = (name: string) => {
     return name
@@ -51,6 +55,24 @@ export function Header({ showLogo = true }: { showLogo?: boolean } = {}) {
           </Link>
         )}
         <nav className="flex items-center gap-2 sm:gap-4 ml-auto">
+          {/* Active AI Job Progress Badge */}
+          {activeJob && (activeJob.status === 'generating' || activeJob.status === 'pending') && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-2 border-primary/40 bg-primary/5 text-primary hover:bg-primary/10 transition-all shadow-sm"
+              asChild
+            >
+              <Link href={`/exam/generate?jobId=${activeJob.jobId}`}>
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-primary shrink-0" />
+                <span className="text-xs font-semibold hidden xs:inline">
+                  AI {activeJob.type === 'refine' ? 'Refine' : 'Generate'} ({activeJob.progress}%)
+                </span>
+                <span className="text-xs font-semibold xs:hidden">{activeJob.progress}%</span>
+              </Link>
+            </Button>
+          )}
+
           <Button
             variant="ghost"
             size="icon"

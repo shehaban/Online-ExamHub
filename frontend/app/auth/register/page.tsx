@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth-context'
+import { apiRequest } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -27,10 +28,21 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [role, setRole] = useState<'student' | 'instructor'>('student')
   const [instructorCode, setInstructorCode] = useState('')
+  const [validTeacherCode, setValidTeacherCode] = useState('INSTRUCTOR2024')
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { register } = useAuth()
   const router = useRouter()
+
+  useEffect(() => {
+    apiRequest('/users/public-settings')
+      .then((res) => {
+        if (res.data?.settings?.teacher_code) {
+          setValidTeacherCode(res.data.settings.teacher_code)
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   const handleRoleChange = (value: 'student' | 'instructor') => {
     setRole(value)
@@ -52,7 +64,7 @@ export default function RegisterPage() {
       return
     }
 
-    if (role === 'instructor' && instructorCode !== 'INSTRUCTOR2024') {
+    if (role === 'instructor' && instructorCode.trim() !== validTeacherCode) {
       setError('Invalid instructor access code')
       return
     }
@@ -60,7 +72,7 @@ export default function RegisterPage() {
     setIsSubmitting(true)
 
     try {
-      const result = await register({ number, password, name, role, email }) // added email to the register function here
+      const result = await register({ number, password, name, role, email, instructorCode })
       if (result.success) {
         router.push('/')
       } else {

@@ -73,7 +73,7 @@ export default function LoginPage() {
             <div>
               <CardTitle className="text-2xl">Welcome back</CardTitle>
               <CardDescription className="mt-2">
-                Sign in with your student or instructor number
+                Sign in with your student/instructor number, email, or name
               </CardDescription>
             </div>
           </CardHeader>
@@ -86,11 +86,11 @@ export default function LoginPage() {
                 </Alert>
               )}
               <div className="space-y-2">
-                <Label htmlFor="number">Student / Instructor Number</Label>
+                <Label htmlFor="number">Student / Instructor Number, Email, or Name</Label>
                 <Input
                   id="number"
                   type="text"
-                  placeholder="e.g. STU-00456 or INS-00123"
+                  placeholder="e.g. STU-00456, student@example.com, or Full Name"
                   value={number}
                   onChange={(e) => setNumber(e.target.value)}
                   required

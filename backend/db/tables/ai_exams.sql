@@ -1,0 +1,11 @@
+CREATE TABLE IF NOT EXISTS ai_exams (
+  ai_exam_id INT AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  source_text LONGTEXT NULL,
+  file_name VARCHAR(255) NULL,
+  questions JSON NOT NULL,
+  created_by VARCHAR(50) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_ai_exams_creator (created_by)
+);

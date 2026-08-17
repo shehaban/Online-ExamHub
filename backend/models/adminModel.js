@@ -27,6 +27,24 @@ export const getAdminByName = async (name) => {
   return admins[0]
 }
 
+export const getAdminByIdentifier = async (identifier) => {
+  if (!identifier) return null
+  const clean = String(identifier).trim()
+  try {
+    const [rows] = await db.query(
+      "SELECT *, 'ADMIN' as rule FROM admins WHERE user_number = ? OR name = ? OR (email IS NOT NULL AND email = ?) LIMIT 1",
+      [clean, clean, clean]
+    )
+    return rows[0] || null
+  } catch (err) {
+    const [rows] = await db.query(
+      "SELECT *, 'ADMIN' as rule FROM admins WHERE user_number = ? OR name = ? LIMIT 1",
+      [clean, clean]
+    )
+    return rows[0] || null
+  }
+}
+
 export const searchAdminsByNamePartial = async (query) => {
   const [rows] = await db.query("SELECT *, 'ADMIN' as rule FROM admins WHERE name LIKE ?", [
     `%${query}%`,

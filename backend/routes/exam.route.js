@@ -33,4 +33,19 @@ router.patch(
   examController.updateSettings
 )
 
+// Anti-cheating endpoints
+router.post('/:code/cheating-alert', verifyToken, examController.logCheatingAlert)
+router.get(
+  '/:code/cheating-alerts',
+  verifyToken,
+  allowedTo(userRoles.INSTRUCTOR, userRoles.ADMIN),
+  examController.getCheatingAlerts
+)
+router.delete(
+  '/:code/cheating-alerts/:userId',
+  verifyToken,
+  allowedTo(userRoles.INSTRUCTOR, userRoles.ADMIN),
+  examController.clearCheatingAlerts
+)
+
 export default router

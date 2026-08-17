@@ -90,6 +90,7 @@ export function ExamPerformanceChart({
             <XAxis dataKey="name" tick={{ fontSize: 11 }} className="text-muted-foreground" />
             <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
             <ChartTooltip
+              cursor={false}
               content={
                 <ChartTooltipContent
                   formatter={(value, name, props) => {
